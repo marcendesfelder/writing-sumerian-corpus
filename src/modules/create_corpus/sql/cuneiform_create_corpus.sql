@@ -114,8 +114,7 @@ EXECUTE format(
 EXECUTE format(
     $$
     ALTER TABLE %1$I.sections 
-        ALTER COLUMN section_name SET NOT NULL,
-        ALTER COLUMN composition_id SET NOT NULL
+        ALTER COLUMN section_name SET NOT NULL
     $$,
     v_schema);
 
