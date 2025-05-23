@@ -102,7 +102,7 @@ BEGIN
           ) AS sign_meanings
         FROM
           @extschema@.pn_variants_unnest
-          JOIN (SELECT DISTINCT pn_id, pn_variant_no FROM NEW) _ USING (pn_id, pn_variant_no)
+          JOIN (SELECT DISTINCT pn_id, pn_variant_no FROM new_table) _ USING (pn_id, pn_variant_no)
         GROUP BY
           pn_id,
           pn_variant_no
