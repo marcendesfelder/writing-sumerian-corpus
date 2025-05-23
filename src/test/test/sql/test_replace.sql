@@ -168,6 +168,19 @@ RETURN NEXT is(content, E'1\tsi a si-a') FROM @extschema:cuneiform_serialize_cor
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION test_replace_word_reference_2 ()
+    RETURNS SETOF text
+    VOLATILE
+    LANGUAGE PLPGSQL
+    AS 
+$BODY$
+BEGIN
+CALL @extschema:cuneiform_parser@.parse(E'1\t%place &iri-sa12-rig7(MUNUS.HUB2.DU) %place &iri-sa12-rig7(MUNUS.HUB2.DU)', -1, '@extschema:cuneiform_corpus@');
+CALL @extschema:cuneiform_replace_corpus@.replace('sa12-(rig7)', 'sag-"1"', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+RETURN NEXT is(content, E'1\t%place &iri-saĝ-rig7(MUNUS.HUB2.DU) %place &iri-saĝ-rig7(MUNUS.HUB2.DU)') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
+END;
+$BODY$;
+
 CREATE OR REPLACE FUNCTION test_replace_compound_1 ()
     RETURNS SETOF text
     VOLATILE
@@ -262,6 +275,34 @@ BEGIN
 CALL @extschema:cuneiform_parser@.parse(E'1\tdiri diri', -1, '@extschema:cuneiform_corpus@');
 CALL @extschema:cuneiform_replace_corpus@.replace('diri', 'si-a', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
 RETURN NEXT is(content, E'1\tsi-a si-a') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION test_preserve ()
+    RETURNS SETOF text
+    VOLATILE
+    LANGUAGE PLPGSQL
+    AS 
+$BODY$
+BEGIN
+CALL @extschema:cuneiform_parser@.parse(E'1\t%s %god %st+ &a %person &mu-;de6', -1, '@extschema:cuneiform_corpus@');
+CALL @extschema:cuneiform_replace_corpus@.replace('DU', 'ĝen', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+RETURN NEXT is(content, E'1\t%s %god %st+ &a %person &mu-;ĝen') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
+CALL @extschema:cuneiform_replace_corpus@.replace('mu', 'ĝu10', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+RETURN NEXT is(content, E'1\t%s %god %st+ &a %person &ĝu10-;ĝen') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION test_preserve_reference ()
+    RETURNS SETOF text
+    VOLATILE
+    LANGUAGE PLPGSQL
+    AS 
+$BODY$
+BEGIN
+CALL @extschema:cuneiform_parser@.parse(E'1\t%s %god %st+ &a %person &du ĝen', -1, '@extschema:cuneiform_corpus@');
+CALL @extschema:cuneiform_replace_corpus@.replace('(du) ĝen', '"1" "1"', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+RETURN NEXT is(content, E'1\t%s %god %st+ &a %person &du du') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
 END;
 $BODY$;
 
