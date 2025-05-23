@@ -117,7 +117,7 @@ BEGIN
             SELECT array_agg(compound_no) INTO v_invalid_compound_nos 
             FROM (
                 SELECT compound_no FROM @extschema:cuneiform_corpus@.compounds WHERE transliteration_id = v_transliteration_id AND compound_comment IS NOT NULL
-                EXCEPT SELECT compound_no_ref FROM pg_temp.corpus_replace WHERE NOT pattern_compound
+                EXCEPT SELECT compound_no_orig FROM pg_temp.corpus_replace WHERE NOT pattern_compound
             )_;
                 
             IF NOT v_invalid_sign_nos IS NULL THEN

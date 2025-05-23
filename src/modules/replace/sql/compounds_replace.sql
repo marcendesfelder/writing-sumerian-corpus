@@ -18,24 +18,25 @@ RETURN QUERY EXECUTE format($$
             pattern_id,
             (row_number() OVER (PARTITION BY transliteration_id ORDER BY sign_no) - 1)::integer AS compound_no,
             pattern_compound,
-            compound_no_ref
+            compound_no_orig,
+            compound_no_pattern
         FROM
             %1$I.%2$I
         WHERE
-            compound_no_ref IS NOT NULL   
+            COALESCE(compound_no_orig, compound_no_pattern) IS NOT NULL   
             AND transliteration_id = %3$s
     )
     SELECT
         x.transliteration_id,
         x.compound_no,
-        COALESCE(a.pn_type, b.pn_type) AS pn_type,
-        COALESCE(a.language, b.language) AS language,
+        COALESCE(b.pn_type, CASE WHEN x.compound_no_pattern > 0 THEN NULL ELSE a.pn_type END) AS pn_type,  --only preserve pn_type for the first compound in the pattern
+        COALESCE(b.language, a.language) AS language,
         a.section_no,
         a.compound_comment
     FROM
         x
-        LEFT JOIN %4$I.compounds a ON (NOT pattern_compound AND x.transliteration_id = a.transliteration_id AND x.compound_no_ref = a.compound_no)
-        LEFT JOIN @extschema@.replace_pattern_compounds b ON (pattern_compound AND x.pattern_id = b.pattern_id AND x.compound_no_ref = b.compound_no);
+        LEFT JOIN %4$I.compounds a ON (x.transliteration_id = a.transliteration_id AND x.compound_no_orig = a.compound_no)
+        LEFT JOIN @extschema@.replace_pattern_compounds b ON (x.pattern_id = b.pattern_id AND x.compound_no_pattern = b.compound_no);
     $$,
     v_corpus_schema,
     v_corpus_table,

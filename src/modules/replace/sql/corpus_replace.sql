@@ -60,15 +60,13 @@ RETURN QUERY EXECUTE format($$
             ) AS new_word,
             b.word_no IS NULL OR lag(b.word_no) OVER w1 IS NULL AS pattern_word,
             a.word_no AS word_no_pattern,
-            b.word_no AS word_no_reference,
             COALESCE(
                 b.compound_no != lag(b.compound_no) OVER w1, 
                 a_words.compound_no != lag(a_words.compound_no) OVER w2, 
                 false
             ) AS new_compound,
             b.compound_no IS NULL OR lag(b.compound_no) OVER w1 IS NULL AS pattern_compound,
-            a_words.compound_no AS compound_no_pattern,
-            b.compound_no AS compound_no_reference
+            a_words.compound_no AS compound_no_pattern
         FROM
             (SELECT DISTINCT match_no FROM matched_signs) match
             CROSS JOIN @extschema@.replace_pattern_corpus a
@@ -83,8 +81,8 @@ RETURN QUERY EXECUTE format($$
         WHERE
             a.pattern_id = %2$s
         WINDOW  
-            w1 AS (PARTITION BY a.sign_no ORDER BY a.sign_no, b.sign_no),
-            w2 AS (ORDER BY a.sign_no)
+            w1 AS (PARTITION BY match.match_no, a.sign_no ORDER BY b.sign_no),
+            w2 AS (PARTITION BY match.match_no ORDER BY a.sign_no)
     ),
     replacement AS (
         SELECT
@@ -102,14 +100,8 @@ RETURN QUERY EXECUTE format($$
             stem,
             pattern_word,
             pattern_compound,
-            CASE 
-                WHEN pattern_word THEN word_no_pattern
-                ELSE word_no_reference
-            END AS word_no_ref,
-            CASE 
-                WHEN pattern_compound THEN compound_no_pattern
-                ELSE compound_no_reference
-            END AS compound_no_ref
+            word_no_pattern,
+            compound_no_pattern
         FROM
             replacement_
     ),
@@ -157,6 +149,7 @@ RETURN QUERY EXECUTE format($$
             bool_or(newline) AS newline,
             @extschema@.last(inverted ORDER BY sign_no_old DESC) AS inverted,
             @extschema@.last(ligature ORDER BY sign_no_old DESC) AS ligature,
+            CASE WHEN bool_and(stem) = bool_or(stem) THEN bool_and(stem) ELSE NULL END AS stem_old,
             min(sign_no_old) AS sign_no_old,
             min(word_no) AS word_no_old,
             min(compound_no) AS compound_no_old,
@@ -183,7 +176,7 @@ RETURN QUERY EXECUTE format($$
             type,
             indicator_type,
             phonographic,
-            stem,
+            COALESCE(stem, stem_old) AS stem,
             condition,
             crits,
             comment,
@@ -195,11 +188,11 @@ RETURN QUERY EXECUTE format($$
             word_no_old,
             word_no AS word_no_new,
             pattern_word,
-            word_no_ref,
+            word_no_pattern,
             compound_no_old,
             compound_no AS compound_no_new,
             pattern_compound,
-            compound_no_ref,
+            compound_no_pattern,
             valid
         FROM
             replacement
@@ -226,11 +219,11 @@ RETURN QUERY EXECUTE format($$
             word_no AS word_no_old,
             NULL AS word_no_new,
             false AS pattern_word,
-            word_no AS word_no_ref,
+            NULL AS word_no_pattern,
             compound_no AS compound_no_old,
             NULL AS compound_no_new,
             false AS pattern_compound,
-            compound_no AS compund_no_ref,
+            NULL AS compound_no_pattern,
             true AS valid
         FROM
             original
@@ -266,7 +259,8 @@ RETURN QUERY EXECUTE format($$
     patched AS (
         SELECT
             *,
-            (sum(new_word::integer) OVER (ORDER BY sign_no_final) - 1)::integer AS word_no_final
+            (sum(new_word::integer) OVER (ORDER BY sign_no_final) - 1)::integer AS word_no_final,
+            (sum(new_compound::integer) OVER (ORDER BY sign_no_final) - 1)::integer AS compound_no_final
         FROM
             patched_
     )
@@ -290,9 +284,11 @@ RETURN QUERY EXECUTE format($$
         ligature,
         %2$s AS pattern_id,
         CASE WHEN new_word THEN pattern_word ELSE NULL END AS pattern_word,
-        CASE WHEN new_word THEN word_no_ref ELSE NULL END AS word_no_ref,
+        CASE WHEN new_word THEN max(word_no_pattern) OVER (PARTITION BY word_no_final) ELSE NULL END AS word_no_pattern,
+        CASE WHEN new_word THEN max(word_no_old) OVER (PARTITION BY word_no_final) ELSE NULL END AS word_no_orig,
         CASE WHEN new_compound THEN pattern_compound ELSE NULL END AS pattern_compound,
-        CASE WHEN new_compound THEN compound_no_ref ELSE NULL END AS compound_no_ref,
+        CASE WHEN new_compound THEN max(compound_no_pattern) OVER (PARTITION BY compound_no_final) ELSE NULL END AS compound_no_pattern,
+        CASE WHEN new_compound THEN max(compound_no_old) OVER (PARTITION BY compound_no_final) ELSE NULL END AS compound_no_orig,
         valid_final
     FROM
         patched

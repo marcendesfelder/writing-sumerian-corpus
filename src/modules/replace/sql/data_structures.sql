@@ -56,9 +56,11 @@ CREATE TYPE corpus_replace_type AS (
     ligature boolean,
     pattern_id integer,
     pattern_word boolean,
-    word_no_ref integer,
+    word_no_pattern integer,
+    word_no_orig integer,
     pattern_compound boolean,
-    compound_no_ref integer,
+    compound_no_pattern integer,
+    compound_no_orig integer,
     valid boolean
 );
 
