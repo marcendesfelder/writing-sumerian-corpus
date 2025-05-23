@@ -48,7 +48,7 @@ SELECT * FROM (
     @extschema:cuneiform_search@.cun_position(
       greatest(ordinality, 0),
       a.pos::integer - 1, 
-      row_number() OVER (PARTITION BY pn_id, pn_variant_no ORDER BY pos DESC) = 1
+      row_number() OVER (PARTITION BY pn_id, pn_variant_no, ordinality ORDER BY pos DESC) = 1
       ) AS position,
     word_no,
     0 AS compound_no,
