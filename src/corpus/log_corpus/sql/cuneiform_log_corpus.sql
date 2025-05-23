@@ -139,7 +139,7 @@ CREATE OR REPLACE PROCEDURE revert_corpus_to (
     AS 
 $BODY$
 BEGIN
-    CALL revert_to(v_transliteration_id, v_timestamp, '@extschema:cuneiform_corpus@');
+    CALL @extschema@.revert_to(v_transliteration_id, v_timestamp, '@extschema:cuneiform_corpus@');
     DELETE FROM @extschema:cuneiform_log_tables@.edits WHERE transliteration_id = v_transliteration_id AND timestamp > v_timestamp;
 END;
 $BODY$;
