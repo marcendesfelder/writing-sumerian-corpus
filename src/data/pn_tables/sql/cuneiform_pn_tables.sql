@@ -25,7 +25,7 @@ CREATE TABLE pn_variants_unnest (
   sign_no integer,
   LIKE @extschema:cuneiform_sign_properties@.sign_meaning,
   PRIMARY KEY (pn_id, pn_variant_no, sign_no),
-  FOREIGN KEY (pn_id, pn_variant_no) REFERENCES pn_variants (pn_id, pn_variant_no) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  FOREIGN KEY (pn_id, pn_variant_no) REFERENCES pn_variants (pn_id, pn_variant_no) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   FOREIGN KEY (value_id) REFERENCES values (value_id) DEFERRABLE INITIALLY IMMEDIATE,
   FOREIGN KEY (sign_id) REFERENCES signs (sign_id) DEFERRABLE INITIALLY IMMEDIATE
 );

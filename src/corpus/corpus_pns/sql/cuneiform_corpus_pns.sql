@@ -5,7 +5,7 @@ CREATE TABLE compounds_pns (
   pn_variant_no integer,
   PRIMARY KEY (transliteration_id, compound_no),
   FOREIGN KEY (transliteration_id, compound_no) REFERENCES @extschema:cuneiform_corpus@.compounds (transliteration_id, compound_no) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (pn_id, pn_variant_no) REFERENCES @extschema:cuneiform_pn_tables@.pn_variants (pn_id, pn_variant_no) ON DELETE CASCADE
+  FOREIGN KEY (pn_id, pn_variant_no) REFERENCES @extschema:cuneiform_pn_tables@.pn_variants (pn_id, pn_variant_no) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 
