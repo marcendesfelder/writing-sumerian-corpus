@@ -285,8 +285,8 @@ $BODY$;
 
 
 CREATE OR REPLACE PROCEDURE merge_signs (
-    v_value_id_1 integer, 
-    v_value_id_2 integer
+    v_sign_id_1 integer, 
+    v_sign_id_2 integer
   )
   LANGUAGE PLPGSQL
 AS $BODY$
@@ -302,7 +302,7 @@ BEGIN
       FROM value_list a 
           JOIN value_list b ON replace(a.value, 'x', '') = regexp_replace(b.value, '[0-9x]+$', '')
       WHERE 
-          a.value ~ 'x' AND a.sign_id = v_value_id_2 AND b.sign_id = v_value_id_1
+          a.value ~ 'x' AND a.sign_id = v_sign_id_2 AND b.sign_id = v_sign_id_1
   LOOP
       CALL @extschema@.delete_value(v_value_id);
   END LOOP;
@@ -315,14 +315,14 @@ BEGIN
       FROM value_list a 
           JOIN value_list b ON replace(a.value, 'x', '') = regexp_replace(b.value, '[0-9x]+$', '')
       WHERE 
-          a.value ~ 'x' AND a.sign_id = v_value_id_1 AND b.sign_id = v_value_id_2
+          a.value ~ 'x' AND a.sign_id = v_sign_id_1 AND b.sign_id = v_sign_id_2
   LOOP
       CALL @extschema@.delete_value(v_value_id);
   END LOOP;
-  UPDATE @extschema@.values SET sign_id = v_value_id_1 where sign_id = v_value_id_2;
-  UPDATE @extschema@.allomorphs SET variant_type = 'nondefault' where sign_id = v_value_id_2 AND variant_type = 'default';
-  UPDATE @extschema@.allomorphs SET sign_id = v_value_id_1 where sign_id = v_value_id_2;
-  DELETE FROM @extschema@.signs WHERE sign_id = v_value_id_2;
+  UPDATE @extschema@.values SET sign_id = v_sign_id_1 WHERE sign_id = v_sign_id_2;
+  UPDATE @extschema@.allomorphs SET variant_type = 'nondefault' WHERE sign_id = v_sign_id_2 AND variant_type = 'default';
+  UPDATE @extschema@.allomorphs SET sign_id = v_sign_id_1 WHERE sign_id = v_sign_id_2;
+  DELETE FROM @extschema@.signs WHERE sign_id = v_sign_id_2;
 END;
 $BODY$;
 
@@ -335,7 +335,7 @@ CREATE OR REPLACE PROCEDURE allomorph_to_allograph (
 AS $BODY$
 DECLARE
 
-  v_variant_type sign_variant_type;
+  v_variant_type @extschema@.sign_variant_type;
   v_specific boolean;
   v_grapheme_id integer;
   v_allograph_specific boolean;
@@ -392,7 +392,7 @@ BEGIN
   END IF;
   INSERT INTO @extschema@.allographs VALUES (default, v_grapheme_id_new, v_glyph_id, v_variant_type, v_specific) RETURNING allograph_id INTO v_allograph_id_new;
   DELETE FROM @extschema@.sign_variants WHERE allomorph_id = v_allomorph_id_new AND allograph_ids = ARRAY[v_allograph_id_new];
-  INSERT INTO @extschema@.sign_variants VALUES (v_sign_variant_id, v_sign_id, v_allomorph_id_new, ARRAY[v_allograph_id_new], v_variant_type, v_specific);
+  INSERT INTO @extschema@.sign_variants OVERRIDING SYSTEM VALUE VALUES (v_sign_variant_id, v_sign_id, v_allomorph_id_new, ARRAY[v_allograph_id_new], v_variant_type, v_specific);
 
   --SET CONSTRAINTS ALL IMMEDIATE;
 
