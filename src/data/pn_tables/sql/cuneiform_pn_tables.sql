@@ -82,6 +82,47 @@ CREATE TRIGGER pn_variants_unnest_insert_trigger
   EXECUTE FUNCTION pn_variants_unnest_trigger_fun ();
 
 
+CREATE OR REPLACE FUNCTION update_pn_variants_unnest_trigger_fun () 
+  RETURNS trigger 
+  VOLATILE
+  LANGUAGE PLPGSQL
+  AS
+$BODY$
+BEGIN
+    UPDATE @extschema@.pn_variants
+    SET sign_meanings = a.sign_meanings
+    FROM
+      (
+        SELECT
+          pn_id,
+          pn_variant_no,
+          array_agg(
+            ROW(word_no, value_id, sign_id, indicator_type, phonographic, stem, capitalized)::@extschema:cuneiform_sign_properties@.sign_meaning
+            ORDER BY sign_no
+          ) AS sign_meanings
+        FROM
+          @extschema@.pn_variants_unnest
+          JOIN (SELECT DISTINCT pn_id, pn_variant_no FROM NEW) _ USING (pn_id, pn_variant_no)
+        GROUP BY
+          pn_id,
+          pn_variant_no
+      )
+      a
+    WHERE
+        pn_variants.pn_id = a.pn_id
+        AND pn_variants.pn_variant_no = a.pn_variant_no
+        AND pn_variants.sign_meanings IS DISTINCT FROM a.sign_meanings;
+    RETURN NULL;
+END;
+$BODY$;
+
+CREATE TRIGGER update_pn_variants_unnest_trigger
+  AFTER UPDATE ON pn_variants_unnest
+  REFERENCING NEW TABLE AS new_table
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION update_pn_variants_unnest_trigger_fun ();
+
+
 CREATE OR REPLACE PROCEDURE load_pns (v_path text)
     LANGUAGE PLPGSQL
     AS $BODY$
