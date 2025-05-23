@@ -103,6 +103,8 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                 spec += " AND {table}.indicator_type = 'right'"
             elif alignment == '<':
                 spec += " AND {table}.indicator_type = 'left'"
+            else:
+                spec += " AND {table}.indicator_type != 'none'"
 
             if indic_type == 'D':
                 spec += " AND {table}.phonographic = false"
