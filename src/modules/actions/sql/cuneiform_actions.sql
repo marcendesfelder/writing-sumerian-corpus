@@ -159,13 +159,12 @@ $BODY$;
 
 
 CREATE OR REPLACE FUNCTION update_entry (
-    transliteration_id integer,
-    entry_no integer,
-    target text,
-    key_col text,
-    col text,
-    value text,
-    schema text
+    v_transliteration_id integer,
+    v_entry_no integer,
+    v_target text,
+    v_key_col text,
+    v_value record,
+    v_schema text
     )
     RETURNS SETOF log_data
     VOLATILE
@@ -173,7 +172,33 @@ CREATE OR REPLACE FUNCTION update_entry (
     LANGUAGE PLPGSQL
     AS 
 $BODY$
+DECLARE
+
+v_value_old record;
+v_cols text;
+
 BEGIN
+
+EXECUTE format(
+    $$
+    SELECT 
+        *
+    FROM
+        %5$I.%4$I
+    WHERE
+        transliteration_id = %1$s AND
+        %3$I = %2$s
+    $$,
+    v_transliteration_id,
+    v_entry_no,
+    v_key_col,
+    v_target,
+    v_schema)
+    INTO v_value_old;
+
+IF v_value = v_value_old THEN
+    RETURN;
+END IF;
 
 RETURN QUERY EXECUTE format(
     $$
@@ -182,38 +207,47 @@ RETURN QUERY EXECUTE format(
         %2$s,
         %3$L,
         %4$L,
-        'update %5$s',
-        %6$L,
-        %5$I::text
-    FROM
-        %7$I.%4$I
+        'update',
+        %5$L,
+        %6$L
+    $$,
+    v_transliteration_id,
+    v_entry_no,
+    v_key_col,
+    v_target,
+    v_value,
+    v_value_old);
+
+EXECUTE format(
+    $$
+    SELECT 
+        string_agg(quote_ident(attname), ', ' ORDER BY attnum) 
+    FROM 
+        pg_attribute 
+    WHERE 
+        attrelid = '%2$I.%1$I'::regclass 
+        AND attnum > 0 
+        AND NOT attisdropped
+    $$,
+    v_target,
+    v_schema)
+    INTO v_cols;
+
+EXECUTE format(
+    $$
+    UPDATE %5$I.%4$I SET
+        (%7$s) = (SELECT (%6$L::%5$I.%4$I).*)
     WHERE
         transliteration_id = %1$s AND
         %3$I = %2$s
     $$,
-    transliteration_id,
-    entry_no,
-    key_col,
-    target,
-    col,
-    value,
-    schema);
-
-EXECUTE format(
-    $$
-    UPDATE %I.%I SET
-        %I = %L
-    WHERE
-        transliteration_id = %s AND
-        %I = %s;
-    $$,
-    schema,
-    target,
-    col,
-    value,
-    transliteration_id,
-    key_col,
-    entry_no);
+    v_transliteration_id,
+    v_entry_no,
+    v_key_col,
+    v_target,
+    v_schema,
+    v_value,
+    v_cols);
 
 RETURN;
 

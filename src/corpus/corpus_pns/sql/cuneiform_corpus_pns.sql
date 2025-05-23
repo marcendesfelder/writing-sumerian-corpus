@@ -218,51 +218,6 @@ END;
 
 
 
-CREATE OR REPLACE FUNCTION update_corpus_if_necessary (
-    v_transliteration_id integer,
-    v_sign_no integer,
-    v_col text,
-    v_val text
-    )
-    RETURNS SETOF @extschema:cuneiform_actions@.log_data
-    VOLATILE
-    ROWS 1
-    LANGUAGE PLPGSQL
-    AS
-$BODY$
-DECLARE
-
-v_necessary boolean;
-
-BEGIN
-
-EXECUTE format(
-    $$
-    SELECT 
-        COALESCE(%3$I != %4$L, NOT (%3$I IS NULL AND %4$L IS NULL)) 
-    FROM 
-        @extschema:cuneiform_corpus@.corpus 
-    WHERE 
-        transliteration_id = %1$s
-        AND sign_no = %2$s
-    $$,
-    v_transliteration_id,
-    v_sign_no,
-    v_col,
-    v_val)
-    INTO v_necessary;
-
-IF v_necessary THEN
-    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(v_transliteration_id, v_sign_no, 'corpus', 'sign_no', v_col, v_val, '@extschema:cuneiform_corpus@');
-END IF;
-
-RETURN;
-
-END;
-$BODY$;
-
-
-
 CREATE OR REPLACE FUNCTION adjust_compound_to_sign_meanings (
     v_transliteration_id integer,
     v_compound_no integer,
@@ -412,17 +367,31 @@ LOOP
                 '@extschema:cuneiform_corpus@');
             SELECT v_sign_no_diff+1 INTO v_sign_no_diff;
         ELSE
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'value_id', (v_sign_meanings[v_sign_no+1]).value_id::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'sign_variant_id', v_sign_variant_ids_new[v_i]::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'type', CASE WHEN (v_sign_meanings[v_sign_no+1]).value_id IS NULL THEN 'sign' ELSE 'value' END);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'indicator_type', (v_sign_meanings[v_sign_no+1]).indicator_type::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'phonographic', (v_sign_meanings[v_sign_no+1]).phonographic::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'stem', (v_sign_meanings[v_sign_no+1]).stem::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'condition', v_condition::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'crits', v_crits::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'newline', v_newline::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'inverted', v_inverted::text);
-            RETURN QUERY SELECT * FROM @extschema@.update_corpus_if_necessary(v_transliteration_id, v_sign_no + v_min_sign_no, 'ligature', v_ligature::text);
+            RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(
+              v_transliteration_id, 
+              v_sign_no + v_min_sign_no, 
+              'corpus', 
+              'sign_no', 
+              (
+                v_transliteration_id, 
+                v_sign_no + v_min_sign_no,
+                v_line_no,
+                v_word_no,
+                (v_sign_meanings[v_sign_no+1]).value_id,
+                v_sign_variant_ids_new[v_i],
+                NULL,
+                CASE WHEN (v_sign_meanings[v_sign_no+1]).value_id IS NULL THEN 'sign' ELSE 'value' END,
+                (v_sign_meanings[v_sign_no+1]).indicator_type,
+                (v_sign_meanings[v_sign_no+1]).phonographic,
+                (v_sign_meanings[v_sign_no+1]).stem,
+                v_condition,
+                v_crits,
+                NULL,
+                v_newline,
+                v_inverted,
+                v_ligature
+              )::@extschema:cuneiform_corpus@.corpus,
+              '@extschema:cuneiform_corpus@');
         END IF;
     END LOOP;
 
@@ -497,7 +466,18 @@ FOR v_word_no IN
         AND compound_no = v_compound_no
     LOOP
 
-    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(v_transliteration_id, v_word_no, 'words', 'word_no', 'capitalized', v_capitalizeds[v_word_no-v_min_word_no+1]::text, '@extschema:cuneiform_corpus@');
+    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(
+      v_transliteration_id, 
+      v_word_no, 
+      'words', 
+      'word_no', 
+      (
+        v_transliteration_id, 
+        v_word_no,
+        v_compound_no, 
+        v_capitalizeds[v_word_no-v_min_word_no+1]
+      )::@extschema:cuneiform_corpus@.words, 
+      '@extschema:cuneiform_corpus@');
 
 END LOOP;
 

@@ -28,9 +28,10 @@ DECLARE
 
 BEGIN
 
-    CREATE TEMPORARY TABLE IF NOT EXISTS corpus (LIKE @extschema:cuneiform_replace@.corpus_replace_type);
+    CREATE TEMPORARY TABLE IF NOT EXISTS corpus_replace (LIKE @extschema:cuneiform_replace@.corpus_replace_type);
     CREATE TEMPORARY TABLE IF NOT EXISTS words (LIKE @extschema:cuneiform_corpus@.words);
     CREATE TEMPORARY TABLE IF NOT EXISTS compounds (LIKE @extschema:cuneiform_corpus@.compounds);
+    CREATE OR REPLACE TEMPORARY VIEW corpus AS SELECT transliteration_id, sign_no, line_no, word_no, value_id, sign_variant_id, custom_value, type, indicator_type, phonographic, stem, condition, crits, comment, newline, inverted, ligature FROM pg_temp.corpus_replace;
     CREATE OR REPLACE TEMPORARY VIEW lines AS SELECT * FROM @extschema:cuneiform_corpus@.lines;
     CREATE OR REPLACE TEMPORARY VIEW blocks AS SELECT * FROM @extschema:cuneiform_corpus@.blocks;
     CREATE OR REPLACE TEMPORARY VIEW surfaces AS SELECT * FROM @extschema:cuneiform_corpus@.surfaces;
@@ -108,15 +109,15 @@ BEGIN
             CONTINUE;
         END IF;
         BEGIN
-            INSERT INTO pg_temp.corpus SELECT * FROM @extschema:cuneiform_replace@.corpus_replace(v_transliteration_id, v_pattern_id, v_sign_nos, v_match_nos, v_reference_ids, v_reference_sign_nos, v_reference_match_nos, '@extschema:cuneiform_corpus@');
-            INSERT INTO pg_temp.words SELECT * FROM @extschema:cuneiform_replace@.words_replace(v_transliteration_id, 'corpus', 'pg_temp', '@extschema:cuneiform_corpus@');
-            INSERT INTO pg_temp.compounds SELECT * FROM @extschema:cuneiform_replace@.compounds_replace(v_transliteration_id, 'corpus', 'pg_temp', '@extschema:cuneiform_corpus@');
+            INSERT INTO pg_temp.corpus_replace SELECT * FROM @extschema:cuneiform_replace@.corpus_replace(v_transliteration_id, v_pattern_id, v_sign_nos, v_match_nos, v_reference_ids, v_reference_sign_nos, v_reference_match_nos, '@extschema:cuneiform_corpus@');
+            INSERT INTO pg_temp.words SELECT * FROM @extschema:cuneiform_replace@.words_replace(v_transliteration_id, 'corpus_replace', 'pg_temp', '@extschema:cuneiform_corpus@');
+            INSERT INTO pg_temp.compounds SELECT * FROM @extschema:cuneiform_replace@.compounds_replace(v_transliteration_id, 'corpus_replace', 'pg_temp', '@extschema:cuneiform_corpus@');
             
-            SELECT array_agg(sign_no) INTO v_invalid_sign_nos FROM pg_temp.corpus WHERE NOT valid;
+            SELECT array_agg(sign_no) INTO v_invalid_sign_nos FROM pg_temp.corpus_replace WHERE NOT valid;
             SELECT array_agg(compound_no) INTO v_invalid_compound_nos 
             FROM (
                 SELECT compound_no FROM @extschema:cuneiform_corpus@.compounds WHERE transliteration_id = v_transliteration_id AND compound_comment IS NOT NULL
-                EXCEPT SELECT compound_no_ref FROM pg_temp.corpus WHERE NOT pattern_compound
+                EXCEPT SELECT compound_no_ref FROM pg_temp.corpus_replace WHERE NOT pattern_compound
             )_;
                 
             IF NOT v_invalid_sign_nos IS NULL THEN
@@ -136,7 +137,7 @@ BEGIN
             WHEN not_null_violation THEN RAISE NOTICE 'Skipping %: Signs missing in replacement', v_transliteration_id;
         END;
 
-        TRUNCATE pg_temp.corpus;
+        TRUNCATE pg_temp.corpus_replace;
         TRUNCATE pg_temp.words;
         TRUNCATE pg_temp.compounds;
 
@@ -146,7 +147,8 @@ BEGIN
 
     END LOOP;
 
-    DROP TABLE pg_temp.corpus;
+    DROP VIEW pg_temp.corpus;
+    DROP TABLE pg_temp.corpus_replace;
     DROP TABLE pg_temp.words;
     DROP TABLE pg_temp.compounds;
 

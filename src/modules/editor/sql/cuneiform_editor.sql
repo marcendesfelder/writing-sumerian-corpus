@@ -86,7 +86,6 @@ CREATE OR REPLACE FUNCTION update_all_entries (
     v_transliteration_id integer,
     v_target text,
     v_key_col text,
-    v_col text,
     v_source_schema text, 
     v_target_schema text
   )
@@ -104,50 +103,17 @@ BEGIN
   FOR v_entry_no, v_value IN EXECUTE format($$
     SELECT 
       %3$I, 
-      a.%4$I::text
+      %2$I::text
     FROM 
-      %5$I.%2$I a 
-      JOIN %6$I.%2$I b USING (transliteration_id, %3$I) 
+      %4$I.%2$I
     WHERE 
-      transliteration_id = %1$s 
-      AND COALESCE(a.%4$I != b.%4$I, NOT (a.%4$I IS NULL AND b.%4$I IS NULL))
+      transliteration_id = %1$s
     $$,
-    v_transliteration_id, v_target, v_key_col, v_col, v_source_schema, v_target_schema)
+    v_transliteration_id, v_target, v_key_col, v_source_schema)
   LOOP
 
-    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(v_transliteration_id, v_entry_no, v_target, v_key_col, v_col, v_value, v_target_schema);
+    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(v_transliteration_id, v_entry_no, v_target, v_key_col, v_value, v_target_schema);
 
-  END LOOP;
-
-  RETURN;
-
-END;
-$BODY$;
-
-
-CREATE OR REPLACE FUNCTION update_all_entries (
-    v_transliteration_id integer,
-    v_target text,
-    v_key_col text,
-    v_columns text[],
-    v_special_col boolean[],
-    v_source_schema text, 
-    v_target_schema text
-  )
-  RETURNS SETOF log_data
-  VOLATILE
-  LANGUAGE PLPGSQL
-AS $BODY$
-DECLARE
-
-  i integer;
-
-BEGIN
-
-  FOR i IN 1..array_length(v_columns, 1) LOOP
-    IF NOT v_special_col[i] THEN
-      RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, v_target, v_key_col, v_columns[i], v_source_schema, v_target_schema);
-    END IF;
   END LOOP;
 
   RETURN;
@@ -518,33 +484,29 @@ BEGIN
     END IF;
   END LOOP;
 
-  FOREACH v_col IN ARRAY array['custom_value', 'value_id', 'sign_variant_id', 'type', 'indicator_type', 'phonographic', 'stem', 
-                              'condition', 'crits', 'comment', 'newline', 'inverted', 'ligature'] LOOP
-    RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'corpus', 'sign_no', v_col, v_source_schema, v_target_schema);
-  END LOOP;
-
   RETURN QUERY SELECT * FROM @extschema@.delete_empty_entries(v_transliteration_id, 'words', 'corpus', 'word_no', v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.split_merge_all_entries(v_transliteration_id, 'words', 'corpus', 'word_no', 'sign_no', v_word_columns, v_word_special_col, v_source_schema, v_target_schema);
-  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'words', 'word_no', v_word_columns, v_word_special_col, v_source_schema, v_target_schema);   
 
   RETURN QUERY SELECT * FROM @extschema@.delete_empty_entries(v_transliteration_id, 'compounds', 'words', 'compound_no', v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.split_merge_all_entries(v_transliteration_id, 'compounds', 'words', 'compound_no', 'word_no', v_compound_columns, v_compound_special_col, v_source_schema, v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.align_sections(v_transliteration_id, v_source_schema, v_target_schema);
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'compounds', 'compound_no', v_source_schema, v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.delete_empty_entries(v_transliteration_id, 'sections', 'compounds', 'section_no', v_target_schema);
-  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'compounds', 'compound_no', v_compound_columns, v_compound_special_col, v_source_schema, v_target_schema);
-  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'sections', 'section_no', v_section_columns, v_section_special_col, v_source_schema, v_target_schema);
-
+  
   RETURN QUERY SELECT * FROM @extschema@.delete_empty_entries(v_transliteration_id, 'lines', 'corpus', 'line_no', v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.split_merge_all_entries(v_transliteration_id, 'lines', 'corpus', 'line_no', 'sign_no', v_line_columns, v_line_special_col, v_source_schema, v_target_schema);
-  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'lines', 'line_no', v_line_columns, v_line_special_col, v_source_schema, v_target_schema);
 
   RETURN QUERY SELECT * FROM @extschema@.delete_empty_entries(v_transliteration_id, 'blocks', 'lines', 'block_no', v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.split_merge_all_entries(v_transliteration_id, 'blocks', 'lines', 'block_no', 'line_no', v_block_columns, v_block_special_col, v_source_schema, v_target_schema);
-  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'blocks', 'block_no', v_block_columns, v_block_special_col, v_source_schema, v_target_schema);
-
   RETURN QUERY SELECT * FROM @extschema@.delete_empty_entries(v_transliteration_id, 'surfaces', 'blocks', 'surface_no', v_target_schema);
   RETURN QUERY SELECT * FROM @extschema@.split_merge_all_entries(v_transliteration_id, 'surfaces', 'blocks', 'surface_no', 'block_no', v_surface_columns, v_surface_special_col, v_source_schema, v_target_schema);
-  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'surfaces', 'surface_no', v_surface_columns, v_surface_special_col, v_source_schema, v_target_schema);
+  
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'corpus', 'sign_no', v_source_schema, v_target_schema);   
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'words', 'word_no', v_source_schema, v_target_schema);   
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'sections', 'section_no', v_source_schema, v_target_schema);
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'lines', 'line_no', v_source_schema, v_target_schema);
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'blocks', 'block_no', v_source_schema, v_target_schema);
+  RETURN QUERY SELECT * FROM @extschema@.update_all_entries(v_transliteration_id, 'surfaces', 'surface_no', v_source_schema, v_target_schema);
 
   RETURN;
 END;

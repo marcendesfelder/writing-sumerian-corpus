@@ -22,8 +22,8 @@ SELECT string_to_array(v_action, ' ') INTO v_ops;
 CASE v_ops[1]
     WHEN 'update' THEN
         RETURN format(
-            'SELECT @extschema:cuneiform_actions@.update_entry(%s, %s, %L, %L, %L, %L, %L)', 
-            v_transliteration_id, v_entry_no, v_target, v_key_col, v_ops[2], v_val, v_schema);
+            'SELECT @extschema:cuneiform_actions@.update_entry(%s, %s, %L, %L, %L, %L)', 
+            v_transliteration_id, v_entry_no, v_target, v_key_col, v_val, v_schema);
     WHEN 'adjust' THEN
         RETURN format(
             'SELECT @extschema:cuneiform_actions@.adjust_key_col(%s, %s, %L, %L, %L, %L, %L)',
@@ -34,7 +34,7 @@ CASE v_ops[1]
             v_transliteration_id, v_entry_no, v_target, v_key_col, v_val, v_schema);
     WHEN 'insert' THEN
         RETURN format(
-            'SELECT @extschema:cuneiform_actions@.insert_entry(%1$s, %2$s, %3$L, %4$L, %5$L::%6$I.%3$I, %6$L)'
+            'SELECT @extschema:cuneiform_actions@.insert_entry(%1$s, %2$s, %3$L, %4$L, %5$L::%6$I.%3$I, %6$L)',
             v_transliteration_id, v_entry_no, v_target, v_key_col, v_val, v_schema);
     WHEN 'delete' THEN
         RETURN format(
@@ -70,8 +70,8 @@ SELECT string_to_array(v_action, ' ') INTO v_ops;
 CASE v_ops[1]
     WHEN 'update' THEN
         RETURN format(
-            'SELECT @extschema:cuneiform_actions@.update_entry(%s, %s, %L, %L, %L, %L, %L)', 
-            v_transliteration_id, v_entry_no, v_target, v_key_col, v_ops[2], v_val_old, v_schema);
+            'SELECT @extschema:cuneiform_actions@.update_entry(%s, %s, %L, %L, %L, %L)', 
+            v_transliteration_id, v_entry_no, v_target, v_key_col, v_val_old, v_schema);
     WHEN 'adjust' THEN
         RETURN format(
             'SELECT @extschema:cuneiform_actions@.adjust_key_col(%s, %s, %L, %L, %L, %L, %L)',
