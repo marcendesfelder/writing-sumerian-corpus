@@ -211,6 +211,32 @@ RETURN NEXT is(content, E'1\te--si %a a') FROM @extschema:cuneiform_serialize_co
 END;
 $BODY$;
 
+CREATE OR REPLACE FUNCTION test_replace_compound_3 ()
+    RETURNS SETOF text
+    VOLATILE
+    LANGUAGE PLPGSQL
+    AS 
+$BODY$
+BEGIN
+CALL @extschema:cuneiform_parser@.parse(E'1\tda--si a--da', -1, '@extschema:cuneiform_corpus@');
+CALL @extschema:cuneiform_replace_corpus@.replace('SI A', 'diri', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+RETURN NEXT is(content, E'1\tda--diri--da') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
+END;
+$BODY$;
+
+CREATE OR REPLACE FUNCTION test_replace_word_1 ()
+    RETURNS SETOF text
+    VOLATILE
+    LANGUAGE PLPGSQL
+    AS 
+$BODY$
+BEGIN
+CALL @extschema:cuneiform_parser@.parse(E'1\tda-si a-da', -1, '@extschema:cuneiform_corpus@');
+CALL @extschema:cuneiform_replace_corpus@.replace('SI A', 'diri', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+RETURN NEXT is(content, E'1\tda-diri-da') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
+END;
+$BODY$;
+
 CREATE OR REPLACE FUNCTION test_replace_compound_reference ()
     RETURNS SETOF text
     VOLATILE

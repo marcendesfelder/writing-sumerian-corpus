@@ -34,7 +34,9 @@ RETURN QUERY EXECUTE format($$
     ),
     original AS (
         SELECT
-            *
+            *,
+            COALESCE(word_no != lag(word_no) OVER (ORDER BY sign_no), false) AS new_word,
+            COALESCE(compound_no != lag(compound_no) OVER (ORDER BY sign_no), false) AS new_compound
         FROM
             %3$I.corpus
             LEFT JOIN %3$I.words USING (transliteration_id, word_no)
@@ -45,6 +47,7 @@ RETURN QUERY EXECUTE format($$
     replacement_ AS (
         SELECT
             match.match_no,
+            %1$s AS transliteration_id,
             row_number() OVER (PARTITION BY match.match_no ORDER BY a.sign_no, b.sign_no) - 1 AS sign_no,
             COALESCE(b.value_id, a.value_id) AS value_id,
             COALESCE(b.sign_variant_id, a.sign_variant_id) AS sign_variant_id,
@@ -55,15 +58,13 @@ RETURN QUERY EXECUTE format($$
             COALESCE(b.stem, a.stem) AS stem,
             COALESCE(
                 b.word_no != lag(b.word_no) OVER w1, 
-                a.word_no != lag(a.word_no) OVER w2, 
-                false
+                a.word_no != lag(a.word_no) OVER w2
             ) AS new_word,
             b.word_no IS NULL OR lag(b.word_no) OVER w1 IS NULL AS pattern_word,
             a.word_no AS word_no_pattern,
             COALESCE(
                 b.compound_no != lag(b.compound_no) OVER w1, 
-                a_words.compound_no != lag(a_words.compound_no) OVER w2, 
-                false
+                a_words.compound_no != lag(a_words.compound_no) OVER w2
             ) AS new_compound,
             b.compound_no IS NULL OR lag(b.compound_no) OVER w1 IS NULL AS pattern_compound,
             a_words.compound_no AS compound_no_pattern
@@ -85,23 +86,10 @@ RETURN QUERY EXECUTE format($$
             w2 AS (PARTITION BY match.match_no ORDER BY a.sign_no)
     ),
     replacement AS (
-        SELECT
-            match_no,
-            %1$s AS transliteration_id,
-            sign_no,
-            sum(new_word::integer) OVER (ORDER BY sign_no) AS word_no,
-            sum(new_compound::integer) OVER (ORDER BY sign_no) AS compound_no,
-            value_id,
-            sign_variant_id,
-            custom_value,
-            type,
-            indicator_type,
-            phonographic,
-            stem,
-            pattern_word,
-            pattern_compound,
-            word_no_pattern,
-            compound_no_pattern
+        SELECT 
+            *,
+            SUM(new_word::integer) OVER (ORDER BY sign_no) AS word_no_new,
+            SUM(new_compound::integer) OVER (ORDER BY sign_no) AS compound_no_new
         FROM
             replacement_
     ),
@@ -151,6 +139,8 @@ RETURN QUERY EXECUTE format($$
             @extschema@.last(ligature ORDER BY sign_no_old DESC) AS ligature,
             CASE WHEN bool_and(stem) = bool_or(stem) THEN bool_and(stem) ELSE NULL END AS stem_old,
             min(sign_no_old) AS sign_no_old,
+            (array_agg(new_word ORDER BY sign_no_old))[1] AS new_word_old,
+            (array_agg(new_compound ORDER BY sign_no_old))[1] AS new_compound_old,
             min(word_no) AS word_no_old,
             min(compound_no) AS compound_no_old,
             @extschema@.bool_and_ex_last(NOT inverted AND NOT ligature ORDER BY sign_no_old DESC)     
@@ -166,7 +156,7 @@ RETURN QUERY EXECUTE format($$
             match_no,
             sign_no_new
     ),
-    patched__ AS (
+    patched_ AS (
         SELECT
             match_no,
             line_no,
@@ -185,12 +175,14 @@ RETURN QUERY EXECUTE format($$
             ligature,
             sign_no AS sign_no_new,
             sign_no_old,
+            COALESCE(new_word, new_word_old) AS new_word,
+            word_no_new,
             word_no_old,
-            word_no AS word_no_new,
             pattern_word,
             word_no_pattern,
+            COALESCE(new_compound, new_compound_old) AS new_compound,
+            compound_no_new,
             compound_no_old,
-            compound_no AS compound_no_new,
             pattern_compound,
             compound_no_pattern,
             valid
@@ -216,12 +208,14 @@ RETURN QUERY EXECUTE format($$
             ligature,
             NULL AS sign_no_new,
             sign_no AS sign_no_old,
-            word_no AS word_no_old,
+            new_word,
             NULL AS word_no_new,
+            word_no AS word_no_old,
             false AS pattern_word,
             NULL AS word_no_pattern,
-            compound_no AS compound_no_old,
+            new_compound,
             NULL AS compound_no_new,
+            compound_no AS compound_no_old,
             false AS pattern_compound,
             NULL AS compound_no_pattern,
             true AS valid
@@ -230,39 +224,22 @@ RETURN QUERY EXECUTE format($$
         WHERE
             match_no IS NULL
     ),
-    patched_ AS (
+    patched AS (
         SELECT
             *,
             (row_number() OVER w1 - 1)::integer AS sign_no_final,
-            COALESCE(
-                word_no_new != lag(word_no_new) OVER w2, 
-                word_no_old != lag(word_no_old) OVER w1, 
-                lag(word_no_old) OVER w1 IS NULL
-            ) AS new_word,
-            COALESCE(
-                compound_no_new != lag(compound_no_new) OVER w2, 
-                compound_no_old != lag(compound_no_old) OVER w1, 
-                lag(compound_no_old) OVER w1 IS NULL
-            ) AS new_compound,
+            (sum(new_word::integer) OVER w1)::integer AS word_no_final,
+            (sum(new_compound::integer) OVER w1)::integer AS compound_no_final,
             valid 
                 AND COALESCE(compound_no_new IS NULL OR compound_no_old <= lag(compound_no_old) OVER w3 + 1, true)
                 AND COALESCE(word_no_new IS NULL OR word_no_old <= lag(word_no_old) OVER w4 + 1, true) 
                 AS valid_final
         FROM
-            patched__
-        WINDOW 
-            w1 AS (ORDER BY sign_no_old, match_no, sign_no_new),
-            w2 AS (PARTITION BY match_no ORDER BY sign_no_old, sign_no_new),
+            patched_
+        WINDOW
+            w1 AS (ORDER BY sign_no_old, match_no, sign_no_new), 
             w3 AS (PARTITION BY match_no, compound_no_new ORDER BY sign_no_old, sign_no_new),
             w4 AS (PARTITION BY match_no, word_no_new ORDER BY sign_no_old, sign_no_new)
-    ),
-    patched AS (
-        SELECT
-            *,
-            (sum(new_word::integer) OVER (ORDER BY sign_no_final) - 1)::integer AS word_no_final,
-            (sum(new_compound::integer) OVER (ORDER BY sign_no_final) - 1)::integer AS compound_no_final
-        FROM
-            patched_
     )
     SELECT
         %1$s,
@@ -283,12 +260,12 @@ RETURN QUERY EXECUTE format($$
         inverted,
         ligature,
         %2$s AS pattern_id,
-        CASE WHEN new_word THEN pattern_word ELSE NULL END AS pattern_word,
-        CASE WHEN new_word THEN max(word_no_pattern) OVER (PARTITION BY word_no_final) ELSE NULL END AS word_no_pattern,
-        CASE WHEN new_word THEN max(word_no_old) OVER (PARTITION BY word_no_final) ELSE NULL END AS word_no_orig,
-        CASE WHEN new_compound THEN pattern_compound ELSE NULL END AS pattern_compound,
-        CASE WHEN new_compound THEN max(compound_no_pattern) OVER (PARTITION BY compound_no_final) ELSE NULL END AS compound_no_pattern,
-        CASE WHEN new_compound THEN max(compound_no_old) OVER (PARTITION BY compound_no_final) ELSE NULL END AS compound_no_orig,
+        CASE WHEN new_word OR sign_no_final = 0 THEN pattern_word ELSE NULL END AS pattern_word,
+        CASE WHEN new_word OR sign_no_final = 0 THEN max(word_no_pattern) OVER (PARTITION BY word_no_final) ELSE NULL END AS word_no_pattern,
+        CASE WHEN new_word OR sign_no_final = 0 THEN max(word_no_old) OVER (PARTITION BY word_no_final) ELSE NULL END AS word_no_orig,
+        CASE WHEN new_compound OR sign_no_final = 0 THEN pattern_compound ELSE NULL END AS pattern_compound,
+        CASE WHEN new_compound OR sign_no_final = 0 THEN max(compound_no_pattern) OVER (PARTITION BY compound_no_final) ELSE NULL END AS compound_no_pattern,
+        CASE WHEN new_compound OR sign_no_final = 0 THEN max(compound_no_old) OVER (PARTITION BY compound_no_final) ELSE NULL END AS compound_no_orig,
         valid_final
     FROM
         patched
