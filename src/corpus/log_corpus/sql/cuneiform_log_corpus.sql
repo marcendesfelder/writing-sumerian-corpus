@@ -206,7 +206,7 @@ LOOP
 
         SELECT
             @extschema:cuneiform_serialize@.cun_agg (
-                COALESCE(character_print, custom_value),
+                COALESCE(character_print, custom_value, '!!ERROR!!'),
                 sign_no, 
                 word_no, 
                 compound_no,
@@ -253,7 +253,7 @@ LOOP
         lines_old AS (
             SELECT
                 @extschema:cuneiform_serialize@.cun_agg (
-                    COALESCE(character_print, custom_value),
+                    COALESCE(character_print, custom_value, '!!ERROR!!'),
                     sign_no, 
                     word_no, 
                     compound_no,
