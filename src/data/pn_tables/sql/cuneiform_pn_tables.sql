@@ -14,10 +14,19 @@ CREATE TABLE pn_variants (
 );
 
 
+CREATE TABLE pn_tables.pn_variants_suffixes (
+  pn_id integer, 
+  pn_variant_no integer, 
+  value_ids integer[], 
+  FOREIGN KEY (pn_id, pn_variant_no) REFERENCES pn_variants ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  PRIMARY KEY (pn_id, pn_variant_no, value_ids)
+);
+
+
 SELECT pg_catalog.pg_extension_config_dump('@extschema@.pns', '');
 SELECT pg_catalog.pg_extension_config_dump(pg_get_serial_sequence('@extschema@.pns', 'pn_id'), '');
 SELECT pg_catalog.pg_extension_config_dump('@extschema@.pn_variants', '');
-
+SELECT pg_catalog.pg_extension_config_dump('@extschema@.pn_variants_suffixes', '');
 
 CREATE TABLE pn_variants_unnest (
   pn_id integer,
@@ -133,10 +142,26 @@ SET CONSTRAINTS ALL DEFERRED;
 
 EXECUTE format('COPY @extschema@.pns FROM %L CSV NULL ''\N''', v_path || 'pns.csv');
 EXECUTE format('COPY @extschema@.pn_variants FROM %L CSV NULL ''\N''', v_path || 'pn_variants.csv');
+EXECUTE format('COPY @extschema@.pn_variants_suffixes FROM %L CSV NULL ''\N''', v_path || 'pn_variants_suffixes.csv');
 PERFORM setval(pg_get_serial_sequence('@extschema@.pns', 'pn_id'), max(pn_id)) FROM @extschema@.pns;
 
 END
 $BODY$;
+
+
+CREATE OR REPLACE VIEW pn_variants_suffixes_sign_meanings AS
+SELECT
+  pn_id,
+  pn_variant_no,
+  array_agg((0, value_id, sign_id, 'none', TRUE, FALSE, FALSE)::@extschema:cuneiform_sign_properties@.sign_meaning ORDER BY ord) AS sign_meanings
+FROM
+  @extschema@.pn_variants_suffixes
+  LEFT JOIN LATERAL unnest(value_ids) WITH ORDINALITY AS _(value_id, ord) ON TRUE
+  JOIN @extschema:cuneiform_signlist@.values USING (value_id)
+GROUP BY
+  pn_id,
+  pn_variant_no,
+  value_ids;
 
 
 CREATE OR REPLACE VIEW pn_variants_grapheme_ids AS
