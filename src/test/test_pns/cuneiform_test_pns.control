@@ -2,5 +2,5 @@ comment = 'Test cuneiform proper nouns manipulation'
 default_version = '0.0.1'
 relocatable = false
 module_pathname = '$libdir/cuneiform_test_pns'
-requires = 'pgtap, cuneiform_encoder, cuneiform_parser, cuneiform_context, cuneiform_corpus, cuneiform_serialize_corpus, cuneiform_pn_tables, cuneiform_pns, cuneiform_corpus_pns'
-no_relocate = 'pgtap, cuneiform_encoder, cuneiform_parser, cuneiform_context, cuneiform_corpus, cuneiform_serialize_corpus, cuneiform_pn_tables, cuneiform_pns, cuneiform_corpus_pns'
+requires = 'pgtap, cuneiform_sign_properties, cuneiform_encoder, cuneiform_parser, cuneiform_context, cuneiform_corpus, cuneiform_serialize_corpus, cuneiform_pn_tables, cuneiform_pns, cuneiform_corpus_pns'
+no_relocate = 'pgtap, cuneiform_sign_properties, cuneiform_encoder, cuneiform_parser, cuneiform_context, cuneiform_corpus, cuneiform_serialize_corpus, cuneiform_pn_tables, cuneiform_pns, cuneiform_corpus_pns'
