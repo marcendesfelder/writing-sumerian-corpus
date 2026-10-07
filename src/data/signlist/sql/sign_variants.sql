@@ -59,7 +59,7 @@ SELECT
 FROM (
     SELECT
         *,
-        rank() OVER (PARTITION BY sign_id, glyph_ids ORDER BY variant_type, allomorph_variant_type, grapheme_ids ASC) AS rank2
+        rank() OVER (PARTITION BY sign_id, glyph_ids ORDER BY variant_type, allomorph_variant_type DESC, grapheme_ids ASC) AS rank2
     FROM (
         SELECT 
             *,
