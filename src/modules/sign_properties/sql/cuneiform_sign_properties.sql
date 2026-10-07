@@ -4,6 +4,8 @@ CREATE TYPE language AS ENUM (
     'hittite',
     'eblaite',
     'emesal',
+    'amorite',
+    'hurrian',
     'other'
 );
 
@@ -57,7 +59,7 @@ CREATE TYPE sign_meaning AS (
 );
 
 
-CREATE OR REPLACE FUNCTION value_ids (v_sign_meanings sign_properties.sign_meaning[])
+CREATE OR REPLACE FUNCTION value_ids (v_sign_meanings sign_meaning[])
     RETURNS integer[]
     IMMUTABLE
     LANGUAGE SQL
@@ -70,7 +72,7 @@ FROM
 END;
 
 
-CREATE OR REPLACE FUNCTION sign_ids (v_sign_meanings sign_properties.sign_meaning[])
+CREATE OR REPLACE FUNCTION sign_ids (v_sign_meanings sign_meaning[])
     RETURNS integer[]
     IMMUTABLE
     LANGUAGE SQL
