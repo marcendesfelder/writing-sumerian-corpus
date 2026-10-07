@@ -25,6 +25,6 @@ include $(PGXS)
 
 all: build/$(EXTENSION)--$(version).sql
 
-build/$(EXTENSION)--$(version).sql: sql/$(EXTENSION).sql
+build/$(EXTENSION)--$(version).sql: sql/$(EXTENSION).sql sql/sanatize_log.sql
 	@mkdir -p build
-	@cp sql/$(EXTENSION).sql build/$(EXTENSION)--$(version).sql
+	@cat sql/$(EXTENSION).sql sql/sanatize_log.sql > build/$(EXTENSION)--$(version).sql

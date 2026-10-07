@@ -2,4 +2,4 @@ comment = 'Log tables for a cuneiform corpus'
 default_version = '0.0.1'
 relocatable = false
 module_pathname = '$libdir/cuneiform_log_tables'
-requires = 'cuneiform_corpus'
+requires = 'cuneiform_signlist,cuneiform_corpus'
