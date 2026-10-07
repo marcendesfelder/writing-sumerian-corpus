@@ -14,7 +14,7 @@ CREATE TABLE pn_variants (
 );
 
 
-CREATE TABLE pn_tables.pn_variants_suffixes (
+CREATE TABLE pn_variants_suffixes (
   pn_id integer, 
   pn_variant_no integer, 
   value_ids integer[], 
