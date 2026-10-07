@@ -47,6 +47,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             self.id = id
             self.condition = condition
             self.lineId = None
+            self.matched = True
 
 
     class T(Transformer):
@@ -84,8 +85,21 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             self.lineId += 1
             return res
 
+        def paren_asterisk(self, args):
+            res = []
+            for arg in args:
+                for c in arg:
+                    if c.type == TokenType.CHAR:
+                        c.matched = False
+                    res.append(c)
+            return res
+
         def paren(self, args):
             return [Token(TokenType.LPAREN)] + list(itertools.chain.from_iterable(args[:-1])) + [Token(TokenType.RPAREN)] + ([Wildcard(args[-1])] if args[-1] is not None else [])
+
+        def char_asterisk(self, args):
+            args[0][0].matched = False
+            return args[0]
 
         def char(self, args):
             self.id += 1
@@ -200,7 +214,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             super().__init__()
             self.id = char.id
             self.ids.append(char.id)
-            if char.type == TokenType.CHAR:
+            if char.type == TokenType.CHAR and char.matched:
                 self.matchIds.append(char.id)
             self.condition = char.condition
 

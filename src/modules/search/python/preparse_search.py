@@ -113,6 +113,9 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             s, w = [''.join(x) for x in zip(*args)]
             return re.sub(r'(?<![0-9])([vsgcxXnp])', r'P\1', s), f'<{w}>'
 
+        def char_asterisk(self, args):
+            return '*'+args[0][0], args[0][1]
+
         @v_args(meta=True)
         def value(self, meta, args):
             w = args[0] + (f'({args[1]})' if len(args) == 2 else '')

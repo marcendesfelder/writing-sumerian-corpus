@@ -14,14 +14,18 @@ paren_noline    : "(" _unit_noline ( sep _unit_noline )* ")"                    
 alt             : ( line | paren | _part ) ( _BAR ( line | paren | _part ) )+
 alt_noline      : ( paren_noline | _part ) ( _BAR ( paren_noline | _part ) )+       -> alt
 
-_part           : ( lindicator nullsep )* char ( nullsep rindicator )* 
+_part           : ( lindicator nullsep )* _char_a ( nullsep rindicator )* 
                 | _indicator+
 lindicator      : _indicator
 rindicator      : _indicator 
 _indicator      : det 
                 | pc
-det             : "{" char ( sep char )* "}"
-pc              : "<" char ( sep char )* ">"
+det             : "{" _char_a ( sep _char_a )* "}"
+pc              : "<" _char_a ( sep _char_a )* ">"
+
+_char_a         : char
+                | char_asterisk
+char_asterisk   : char _ASTERISK
 
 char            : VALUE _signspec?                      -> value
                 | signt _signspec?                      -> form
@@ -72,6 +76,7 @@ _N.2            : /[Nn]/
 _ELLIPSIS.2     : "…"|"..."
 _DASH.1         : "-"
 _DOT.1          : "."
+_ASTERISK.1     : "*"
 _SPACE          : /[\t \f\n]+/
 _NL             : "//"
 MOD             : "@" ( /[tgšnkzicdfvabx]/ | "90" | "45" )

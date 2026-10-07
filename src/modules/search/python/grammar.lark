@@ -1,12 +1,21 @@
 start           : _unit ( _sep _unit )*
 
 _unit           : line
-                | paren
-                | char
+                | _paren_a
+                | _char_a
                 | pseudo
 
-line            : "[" ( paren | char | pseudo ) ( _sep ( paren | char| pseudo ) )* "]"
+line            : "[" ( _paren_a | _char_a | pseudo ) ( _sep ( _paren_a | _char_a | pseudo ) )* "]"
+
+_paren_a        : paren
+                | paren_asterisk
+paren_asterisk  : "*" paren
 paren           : "(" _unit ( _sep _unit )* ")" [wildcard]
+
+_char_a         : char
+                | char_asterisk
+char_asterisk   : "*" char
+
 char            : spec+ [wildcard]
                 | indicator [wildcard]
 pseudo          : "p"
