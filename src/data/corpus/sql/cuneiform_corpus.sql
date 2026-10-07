@@ -7,7 +7,8 @@ CREATE TABLE corpora (
     name_long text NOT NULL,
     core boolean NOT NULL,
     date date,
-    reference text
+    reference text,
+    public boolean NOT NULL
 );
 
 

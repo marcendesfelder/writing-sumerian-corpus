@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION startup ()
     LANGUAGE SQL
     AS 
 $BODY$
-INSERT INTO @extschema:cuneiform_corpus@.corpora OVERRIDING SYSTEM VALUE VALUES (-1, 'test', 'test', false);
+INSERT INTO @extschema:cuneiform_corpus@.corpora OVERRIDING SYSTEM VALUE VALUES (-1, 'test', 'test', false, null, null, true);
 INSERT INTO @extschema:cuneiform_context@.genres OVERRIDING SYSTEM VALUE VALUES (-1, 'test');
 INSERT INTO @extschema:cuneiform_corpus@.ensembles OVERRIDING SYSTEM VALUE VALUES (-1, 'test');
 INSERT INTO @extschema:cuneiform_corpus@.texts OVERRIDING SYSTEM VALUE VALUES (-1, -1, null, null, 'test', null, null, null, null, null, -1, null, null, null, null);
