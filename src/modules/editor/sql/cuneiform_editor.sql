@@ -96,23 +96,23 @@ AS $BODY$
 DECLARE
 
   v_entry_no integer;
-  v_value text;
+  v_row record;
 
 BEGIN
 
-  FOR v_entry_no, v_value IN EXECUTE format($$
+  FOR v_row IN EXECUTE format($$
     SELECT 
-      %3$I, 
-      %2$I::text
+      *
     FROM 
-      %4$I.%2$I
+      %3$I.%2$I
     WHERE 
       transliteration_id = %1$s
     $$,
-    v_transliteration_id, v_target, v_key_col, v_source_schema)
+    v_transliteration_id, v_target, v_source_schema)
   LOOP
 
-    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(v_transliteration_id, v_entry_no, v_target, v_key_col, v_value, v_target_schema);
+    v_entry_no := (to_jsonb(v_row) ->> v_key_col)::integer;
+    RETURN QUERY SELECT * FROM @extschema:cuneiform_actions@.update_entry(v_transliteration_id, v_entry_no, v_target, v_key_col, v_row, v_target_schema);
 
   END LOOP;
 
