@@ -79,6 +79,6 @@ _DOT.1          : "."
 _ASTERISK.1     : "*"
 _SPACE          : /[\t \f\n]+/
 _NL             : "//"
-MOD             : "@" ( /[tgšnkzicdfvabx]/ | "90" | "45" )
+MOD             : "@" ( /[tgšnkzicdfvabx]/ | "180" | "90" | "45" )
 SIGNCON         : /[+×%&@]/
 _BAR            : "|"
