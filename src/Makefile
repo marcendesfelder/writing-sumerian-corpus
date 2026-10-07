@@ -28,7 +28,6 @@ all:
 	make -C corpus/corpus_statistics
 	make -C corpus/search_corpus
 	make -C corpus/corpus_pns
-	make -C loader
 	make -C test/test
 	make -C test/test_pns
 
@@ -62,6 +61,5 @@ install:
 	make -C corpus/corpus_statistics install
 	make -C corpus/search_corpus install
 	make -C corpus/corpus_pns install
-	make -C loader install
 	make -C test/test install
 	make -C test/test_pns install
