@@ -312,6 +312,7 @@ CREATE OR REPLACE FUNCTION parse_to_sign_meanings (
         code text
     )
     RETURNS @extschema:cuneiform_sign_properties@.sign_meaning[]
+    STABLE
     LANGUAGE PLPYTHON3U
     AS 
 $BODY$
@@ -320,6 +321,13 @@ from writingsumerianparser import parse
 
 plan = plpy.prepare(
         f"""
+        WITH corpus AS (
+            SELECT
+                *,
+                ordinality = min(ordinality) OVER (PARTITION BY word_no) AS new_word
+            FROM
+                UNNEST($1) WITH ORDINALITY
+        )
         SELECT 
             array_agg(
                 (
@@ -329,12 +337,12 @@ plan = plpy.prepare(
                     indicator_type, 
                     phonographic, 
                     stem,
-                    capitalized
+                    CASE WHEN new_word THEN capitalized ELSE FALSE END
                 )::@extschema:cuneiform_sign_properties@.sign_meaning
                 ORDER BY corpus.ordinality
             ) AS sign_meanings
         FROM
-            UNNEST($1) WITH ORDINALITY AS corpus
+            corpus
             LEFT JOIN UNNEST($2) WITH ORDINALITY AS words ON corpus.word_no = words.ordinality-1
             LEFT JOIN LATERAL @extschema:cuneiform_signlist@.normalize_glyphs(sign_spec) AS _(sign_spec_normlized) ON TRUE
             LEFT JOIN LATERAL @extschema:cuneiform_signlist@.normalize_glyphs(value) AS __(sign_normalized) ON type = 'sign'
