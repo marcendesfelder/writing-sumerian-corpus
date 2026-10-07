@@ -198,10 +198,10 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             return r or ' ', r
 
         def wordbreak(self, args):
-            return ','
+            return ';'
 
         def compoundbreak(self, args):
-            return ';'
+            return ','
 
         def linebreak(self, args):
             return '/'
@@ -213,10 +213,10 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             return ':'
 
         def wordcon(self, args):
-            return '='
+            return '-'
 
         def compoundcon(self, args):
-            return '-'
+            return '='
 
 
         # Complex signs

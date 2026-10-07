@@ -50,12 +50,12 @@ _break          : wordbreak
                 | compoundbreak
                 | linebreak
 
-wordcon         : "="
-compoundcon     : _DASH | _DOT
+wordcon         : _WORDCON | _DOT
+compoundcon     : _COMPOUNDCON
 ellipsis        : _ELLIPSIS
 colon           : ":"
-wordbreak       : ","
-compoundbreak   : ";"
+wordbreak       : _WORDBREAK
+compoundbreak   : _COMPOUNDBREAK
 linebreak       : _NL
 
 signt           : SIMPLESIGN MOD* ( ( SIGNCON | xcon ) ( signt | parensignt ) )*
@@ -74,7 +74,6 @@ _SIGNX.2        : "X"
 X.2             : "x"
 _N.2            : /[Nn]/
 _ELLIPSIS.2     : "…"|"..."
-_DASH.1         : "-"
 _DOT.1          : "."
 _ASTERISK.1     : "*"
 _SPACE          : /[\t \f\n]+/
@@ -82,3 +81,7 @@ _NL             : "//"
 MOD             : "@" ( /[tgšnkzicdfvabx]/ | "180" | "90" | "45" )
 SIGNCON         : /[+×%&@]/
 _BAR            : "|"
+_COMPOUNDBREAK.1: ";;"
+_WORDBREAK.0    : ";"
+_COMPOUNDCON.1  : "--"
+_WORDCON.0      : "-"

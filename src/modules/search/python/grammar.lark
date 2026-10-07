@@ -34,8 +34,8 @@ wildcard        : "@" NUMBER
 
 _sep            : ( " " | wordcon | compoundcon | bar | colon | ellipsis | wordbreak | compoundbreak | linebreak | inheritcon )+
 
-wordcon         : "="
-compoundcon     : "-"
+wordcon         : "-"
+compoundcon     : "="
 ellipsis        : "…"
 colon           : ":"
 wordbreak       : ";"
