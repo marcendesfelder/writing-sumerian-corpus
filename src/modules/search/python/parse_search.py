@@ -26,7 +26,6 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         WORDCON = 10
         COMPOUNDCON = 11
         WC = 12
-        INHERITCON = 13
         PSEUDO = 14
 
 
@@ -108,7 +107,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         @v_args(inline=True)
         def pseudo(self):
             self.id += 1
-            return [Char(self.id, f'c{self.id}.glyph_id IS NULL', True)]
+            return [Char(self.id, f'c{self.id}.sign IS DISTINCT FROM FALSE', True)]
 
         @v_args(inline=True)
         def indicator(self, alignment, indic_type, *specs):
@@ -129,26 +128,30 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         @v_args(inline=True)
         def value(self, id):
             return f'{{table}}.value_id = {id}'
+        
+        @v_args(inline=True)
+        def sign(self, id):
+            return f'{{table}}.sign AND {{table}}.meaning_id = {id}'
 
         @v_args(inline=True)
         def sign_variant(self, id):
-            return f'{{table}}.sign_variant_id = {id}'
+            return f'{{table}}.sign AND {{table}}.form_id = {id}'
 
         @v_args(inline=True)
         def grapheme(self, id):
-            return f'{{table}}.grapheme_id = {id}'
+            return f'NOT {{table}}.sign AND {{table}}.meaning_id = {id}'
 
         @v_args(inline=True)
         def glyph(self, id):
-            return f'{{table}}.glyph_id = {id}'
+            return f'NOT {{table}}.sign AND {{table}}.form_id = {id}'
 
         @v_args(inline=True)
         def signx(self):
-            return f'{{table}}.glyph_id IS NOT NULL'
+            return f'NOT {{table}}.sign'
 
         @v_args(inline=True)
         def valuex(self):
-            return f'{{table}}.sign_variant_id IS NOT NULL'
+            return f'{{table}}.sign'
 
         @v_args(inline=True)
         def numberx(self):
@@ -175,9 +178,6 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
 
         def compoundcon(self, args):
             return [Token(TokenType.COMPOUNDCON)]
-
-        def inheritcon(self, args):
-            return [Token(TokenType.INHERITCON)]
         
         def bar(self, args):
             return [Token(TokenType.BAR)]
@@ -320,6 +320,8 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                     t.append(table)
                 else:
                     if t:
+                        t.ops = table.ops
+                        table.ops = []
                         t.append(table)
                         res.append(t)
                         t = None
@@ -365,7 +367,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                     continue
                 if not table.unordered:
                     if TokenType.ELLIPSIS in a.ops:
-                        conditions.append(f"{a.last('position')} OPERATOR(@extschema@.<) {b.first('position')}")
+                        conditions.append(f"@extschema@.next({a.last('position')}) OPERATOR(@extschema@.<=) {b.first('position')}")
                     else:
                         conditions.append(f"@extschema@.next({a.last('position')}) OPERATOR(@extschema@.=) {b.first('position')}")
                 if TokenType.WORDCON in a.ops:
@@ -385,15 +387,13 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             return conditions
 
 
-        def process(self, tokens, outerOps = []):
+        def process(self, tokens):
             tables = []
             ops = []
             i = 0
             while i < len(tokens):
                 if tokens[i].type in [TokenType.CHAR, TokenType.PSEUDO, TokenType.LPAREN]:
                     if len(tables):
-                        if TokenType.BAR not in ops:
-                            outerOps = [x for x in ops if x in [TokenType.WORDCON, TokenType.COMPOUNDCON]]
                         tables[-1].ops = ops
                         ops = []
                     if tokens[i].type == TokenType.CHAR or tokens[i].type == TokenType.PSEUDO:
@@ -401,26 +401,24 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                         if tokens[i].lineId is not None:
                             self.lines.setdefault(tokens[i].lineId, []).append(tables[-1])
                     else:
-                        t, n = self.process(tokens[i+1:], outerOps)
+                        t, n = self.process(tokens[i+1:])
                         tables.append(t)
                         i += n 
                 elif tokens[i].type == TokenType.RPAREN:
                     break
                 elif tokens[i].type == TokenType.WC:
                     tables[-1].wildcard = tokens[i].id
-                elif tokens[i].type == TokenType.INHERITCON:
-                    ops += outerOps
                 else:
                     ops.append(tokens[i].type)
                 i += 1
 
-            tables = Translator.processAlternative(tables)
             tables = Translator.processUnordered(tables)
+            tables = Translator.processAlternative(tables)
             return ComplexTable(tables), i+1
 
 
         def wildcards(self, table):
-            wildcards = {table.wildcard: table.ids} if table.wildcard is not None else {}
+            wildcards = {table.wildcard: table.matchIds} if table.matchIds and table.wildcard is not None else {}
             if isinstance(table, ComplexTable):
                 for table in table.tables:
                     wildcards.update(self.wildcards(table))

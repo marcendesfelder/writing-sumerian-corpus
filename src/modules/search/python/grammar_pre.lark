@@ -1,4 +1,4 @@
-start           : ( pseudochar _break )? _unit ( sep _unit )* ( _break pseudochar )?
+start           : lanchor? _unit ( sep _unit )* ranchor?
 _unit           : line
                 | paren
                 | alt
@@ -8,7 +8,7 @@ _unit_noline    : paren_noline
                 | alt_noline
                 | _part
 
-line            : "[" _unit_noline ( sep _unit_noline )* "]"
+line            : "[" ( _part | paren_noline ) ( sep ( _part | paren_noline ) )* "]"
 paren           : "(" _unit ( sep _unit )* ")"
 paren_noline    : "(" _unit_noline ( sep _unit_noline )* ")"                        -> paren
 alt             : ( line | paren | _part ) ( _BAR ( line | paren | _part ) )+
@@ -36,15 +36,14 @@ char            : VALUE _signspec?                      -> value
                 | _N                                    -> n
 _signspec       : "(" complex_sign ")"
 complex_sign    : signt ( "." signt )*
-pseudochar      : 
+lanchor         : _break+
+ranchor         : _break+
 
 sep             : ( _SPACE | _break | ellipsis | colon )+ 
                 | ( linebreak | ellipsis | colon )* wordcon ( linebreak | ellipsis | colon | wordcon )*
                 | ( wordbreak | linebreak | ellipsis | colon )* compoundcon ( wordbreak | linebreak | ellipsis | colon | compoundcon )*
 
-nullsep         : _break*
-                | _break* ellipsis _break*
-                | colon
+nullsep         :
 
 _break          : wordbreak 
                 | compoundbreak
@@ -58,18 +57,19 @@ wordbreak       : _WORDBREAK
 compoundbreak   : _COMPOUNDBREAK
 linebreak       : _NL
 
-signt           : SIMPLESIGN MOD* ( ( SIGNCON | xcon ) ( signt | parensignt ) )*
+signt           : ( SIMPLESIGN | SIGNLISTSIGN ) MOD* ( ( SIGNCON | xcon ) ( signt | parensignt ) )*
                 | parensignt MOD+ ( ( SIGNCON | xcon ) ( signt | parensignt ) )*
                 | parensignt ( ( SIGNCON | xcon ) ( signt | parensignt ) )+
 parensignt      : "(" signt ( _DOT signt )* ")"
 xcon            : X
 
 PATTERN.5       : /\/[^\/]+\//
-VALUE.3         : /[abdegĝhḫijklmnpqrřsšṣtṭuwyz’][abdegĝhḫijklmnpqrřsšṣtṭuwyz’]+[0-9xX]*/
-                | /[aeiou][0-9xX]*/
+VALUE.3         : /[abdegĝhḫijklmnpqrřsšṣtṭuwyz’][abdegĝhḫijklmnpqrřsšṣtṭuwyz’]+[0-9x]*/
+                | /[aeiu][0-9x]*/
                 | "d"
 SIMPLESIGN.3    : /[ABDEGĜHḪIJKLMNPQRŘSŠṢTṬUWYZ’][ABDEGĜHḪIJKLMNPQRŘSŠṢTṬUWYZ’]+[0-9]*/
-                | /[AEIOU][0-9]*/ 
+                | /[AEIU][0-9]*/ 
+SIGNLISTSIGN.4  : /(ELLES|LAK|KWU|REC|RSP|UKN)[0-9][0-9][0-9]/
 _SIGNX.2        : "X"
 X.2             : "x"
 _N.2            : /[Nn]/

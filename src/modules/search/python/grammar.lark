@@ -24,6 +24,7 @@ indicator       : [ALIGNMENT] INDIC_TYPE spec+
 
 spec            : "v" NUMBER                    -> value
                 | "s" NUMBER                    -> sign_variant
+                | "S" NUMBER                    -> sign
                 | "g" NUMBER                    -> grapheme
                 | "c" NUMBER                    -> glyph
                 | "x"                           -> valuex
@@ -32,19 +33,22 @@ spec            : "v" NUMBER                    -> value
 
 wildcard        : "@" NUMBER
 
-_sep            : ( " " | wordcon | compoundcon | bar | colon | ellipsis | wordbreak | compoundbreak | linebreak | inheritcon )+
+_sep            : ( " " | wordcon | compoundcon | bar | colon | ellipsis | wordbreak | compoundbreak | linebreak )+
 
-wordcon         : "-"
-compoundcon     : "="
+wordcon         : _WORDCON
+compoundcon     : _COMPOUNDCON
 ellipsis        : "…"
 colon           : ":"
-wordbreak       : ";"
-compoundbreak   : ","
-linebreak       : "/"
+wordbreak       : _WORDBREAK
+compoundbreak   : _COMPOUNDBREAK
+linebreak       : "//"
 bar             : "|"
-inheritcon      : "~"
 
-TYPE            : /[vsgcxXnp]/
 NUMBER          : /[1-9][0-9]*|0/
 INDIC_TYPE      : /[DP]/
 ALIGNMENT       : /[<>]/
+
+_COMPOUNDBREAK.1: ";;"
+_WORDBREAK.0    : ";"
+_COMPOUNDCON.1  : "--"
+_WORDCON.0      : "-"

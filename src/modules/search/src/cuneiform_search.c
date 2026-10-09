@@ -202,25 +202,32 @@ Datum position_hash_extended(PG_FUNCTION_ARGS)
 
 Datum position_construct(PG_FUNCTION_ARGS)
 {
-    uint32 sign_no = PG_GETARG_UINT32(0);
-    uint32 component_no = PG_GETARG_UINT32(1);
+    int32 sign_no = PG_GETARG_INT32(0);
+    int32 component_no = PG_GETARG_INT32(1);
     bool final = PG_GETARG_BOOL(2);
 
     if(sign_no > 9999999 || sign_no < 0)
         ereport(ERROR,
             (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
              errmsg("invalid value for sign no: %d", sign_no)));
-    if(component_no > 99)
+    if(component_no > 99 || component_no < 0)
         ereport(ERROR,
             (errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
              errmsg("invalid value for component no: %d", component_no)));
     
-    PG_RETURN_UINT32(sign_no << 8 | component_no << 1 | (uint32)final);
+    PG_RETURN_UINT32((uint32)sign_no << 8 | (uint32)component_no << 1 | (uint32)final);
 }
 
-static int cmp(const void* a, const void* b)
+static int cmp_position(const void* a, const void* b)
 {
     return order(DatumGetUInt32(*(const Datum*)a), DatumGetUInt32(*(const Datum*)b));
+}
+
+static int cmp_int32(const void* a, const void* b)
+{
+    int32 x = DatumGetInt32(*(const Datum*)a);
+    int32 y = DatumGetInt32(*(const Datum*)b);
+    return (x > y) - (x < y);
 }
 
 Datum unique(PG_FUNCTION_ARGS)
@@ -261,7 +268,7 @@ Datum unique(PG_FUNCTION_ARGS)
     }
     ++n;
 
-    qsort(vals, n, sizeof(Datum), cmp);
+    qsort(vals, n, sizeof(Datum), cmp_position);
     for(int i = 1; i < n; i++)
     {
         uint32 a = DatumGetUInt32(vals[i-1]);
@@ -311,7 +318,7 @@ Datum consecutive(PG_FUNCTION_ARGS)
     }
     ++n;
 
-    qsort(vals, n, sizeof(Datum), cmp);
+    qsort(vals, n, sizeof(Datum), cmp_position);
     for(int i = 1; i < n; i++)
     {
         uint32 a = DatumGetUInt32(vals[i-1]);
@@ -358,12 +365,13 @@ Datum get_sign_nos(PG_FUNCTION_ARGS)
     deconstruct_array(array, element_type, typlen, typbyval,
                       typalign, &vals, &nulls, &nargs);
            
-    if(!nargs)
-        PG_RETURN_NULL();
-    n = nargs-1;
-    while(nulls[n] && n--);
+    n = nargs - 1;
+    while(n >= 0 && nulls[n]) --n;
     if(n < 0)
-        PG_RETURN_NULL();
+    {
+        result = construct_empty_array(INT4OID);
+        PG_RETURN_ARRAYTYPE_P(result);
+    }
 
     for(int i = 0; i < n; i++)
     {
@@ -376,7 +384,7 @@ Datum get_sign_nos(PG_FUNCTION_ARGS)
     }
     ++n;
 
-    qsort(vals, n, sizeof(Datum), cmp);
+    qsort(vals, n, sizeof(Datum), cmp_position);
 
     vals_new = (Datum*)palloc(n*sizeof(Datum));
     for(int i = 0; i < n; i++)
@@ -415,12 +423,13 @@ Datum sort_uniq_remove_null(PG_FUNCTION_ARGS)
     deconstruct_array(array, element_type, typlen, typbyval,
                       typalign, &vals, &nulls, &nargs);
            
-    if(!nargs)
-        PG_RETURN_NULL();
-    n = nargs-1;
-    while(nulls[n] && n--);
+    n = nargs - 1;
+    while(n >= 0 && nulls[n]) --n;
     if(n < 0)
-        PG_RETURN_NULL();
+    {
+        result = construct_empty_array(INT4OID);
+        PG_RETURN_ARRAYTYPE_P(result);
+    }
 
     for(int i = 0; i < n; i++)
     {
@@ -433,12 +442,12 @@ Datum sort_uniq_remove_null(PG_FUNCTION_ARGS)
     }
     ++n;
 
-    qsort(vals, n, sizeof(Datum), cmp);
+    qsort(vals, n, sizeof(Datum), cmp_int32);
 
     vals_new = (Datum*)palloc(n*sizeof(Datum));
     for(int i = 0; i < n; i++)
         if(!n_new || vals_new[n_new-1] != vals[i])
-            vals_new[n_new++] = Int32GetDatum(vals[i]);
+            vals_new[n_new++] = vals[i];
 
     get_typlenbyvalalign(INT4OID, &typlen, &typbyval, &typalign);
     result = construct_array(vals_new, n_new, INT4OID, typlen, typbyval, typalign);

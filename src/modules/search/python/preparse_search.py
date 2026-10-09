@@ -20,13 +20,12 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
         VALUEX_SPEC_PLAN = plpy.prepare("SELECT array_agg('s' || sign_variant_id::text) AS codes FROM @extschema:cuneiform_signlist@.sign_variants_composition WHERE glyphs = $1 AND specific", ["text"])
         SIGN_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.signs_search WHERE sign = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         FORM_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.forms_search WHERE form = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
-        SIGN_DESCRIPTION_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.sign_descriptions_search WHERE sign = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
-        FORM_DESCRIPTION_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.form_descriptions_search WHERE form = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
-        
+        NORMALIZE_GLYPHS_PLAN = plpy.prepare("SELECT @extschema:cuneiform_signlist@.normalize_glyphs($1)", ["text"])
+
         def normalizeGlyphs(sign):
             if sign is None:
                 return None
-            r = plpy.execute(f"SELECT @extschema:cuneiform_signlist@.normalize_glyphs('{sign}')")
+            r = plpy.execute(DB.NORMALIZE_GLYPHS_PLAN, [sign])
             return r[0]['normalize_glyphs']
 
         def value(value, spec=None):
@@ -48,20 +47,18 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             return codes[0]
 
         def sign(sign, spec):
-            if re.search(r'[\.×&%@]|[0-9][0-9][0-9]$', sign):
-                r = plpy.execute(DB.SIGN_DESCRIPTION_PLAN, [DB.normalizeGlyphs(sign), DB.normalizeGlyphs(spec)])
-            else:
-                r = plpy.execute(DB.SIGN_PLAN, [sign, DB.normalizeGlyphs(spec)])
+            if re.search(r'[\.×&%@+]|[0-9][0-9][0-9]$', sign):
+                sign = DB.normalizeGlyphs(sign)
+            r = plpy.execute(DB.SIGN_PLAN, [sign, DB.normalizeGlyphs(spec)])
             codes = r[0]['codes']
             if not codes:
                 raise ValueError
             return codes
         
         def form(sign, spec):
-            if re.search(r'[\.×&%@]|[0-9][0-9][0-9]$', sign):
-                r = plpy.execute(DB.FORM_DESCRIPTION_PLAN, [DB.normalizeGlyphs(sign), DB.normalizeGlyphs(spec)])
-            else:
-                r = plpy.execute(DB.FORM_PLAN, [sign, DB.normalizeGlyphs(spec)])
+            if re.search(r'[\.×&%@+]|[0-9][0-9][0-9]$', sign):
+                sign = DB.normalizeGlyphs(sign)
+            r = plpy.execute(DB.FORM_PLAN, [sign, DB.normalizeGlyphs(spec)])
             codes = r[0]['codes']
             if not codes:
                 raise ValueError
@@ -107,11 +104,11 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
 
         def det(self, args):
             s, w = [''.join(x) for x in zip(*args)]
-            return re.sub(r'(?<![0-9])([vsgcxXnp])', r'D\1', s), f'{{{w}}}'
+            return re.sub(r'(?<![0-9])([vsSgcxXnp])', r'D\1', s), f'{{{w}}}'
 
         def pc(self, args):
             s, w = [''.join(x) for x in zip(*args)]
-            return re.sub(r'(?<![0-9])([vsgcxXnp])', r'P\1', s), f'<{w}>'
+            return re.sub(r'(?<![0-9])([vsSgcxXnp])', r'P\1', s), f'<{w}>'
 
         def char_asterisk(self, args):
             return '*'+args[0][0], args[0][1]
@@ -129,7 +126,7 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
       
         @v_args(meta=True)
         def pattern(self, meta, args):
-            pattern = f'^{args[0][1:-1]}([0-9]+|x)?$'
+            pattern = f'^({args[0][1:-1]})([0-9]+|x)?$'
             w = args[0] + (f'({args[1]})' if len(args) == 2 else '')
             codes = DB.pattern(pattern, args[1] if len(args) == 2 else None)
             s = '|'.join(codes)
@@ -181,8 +178,13 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             self.wildcards.append((meta.start_pos, self.wildcardId, 'n', False))
             return f'n@{self.wildcardId}', 'n'
 
-        def pseudochar(self, args):
-            return 'p', ''
+        def lanchor(self, args):
+            r = ''.join(sorted(set(args)))
+            return 'p'+r, r
+
+        def ranchor(self, args):
+            r = ''.join(sorted(set(args)))
+            return r+'p', r
 
 
         # Operators
@@ -194,17 +196,16 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
                 return r or ' ', r or ' '
     
         def nullsep(self, args):
-            r = ''.join(sorted(set(args)))
-            return r or ' ', r
+            return ' ', ''
 
         def wordbreak(self, args):
             return ';'
 
         def compoundbreak(self, args):
-            return ','
+            return ';;'
 
         def linebreak(self, args):
-            return '/'
+            return '//'
 
         def ellipsis(self, args):
             return '…'
@@ -216,7 +217,7 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             return '-'
 
         def compoundcon(self, args):
-            return '='
+            return '--'
 
 
         # Complex signs
@@ -267,7 +268,7 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
 
         
     tr = str.maketrans('cjvCJV', 'šĝřŠĜŘ')
-    searchTerm = re.sub(r'(?<!@)[cjvCJV]', lambda m: m.group().translate(tr), search_term)
+    searchTerm = re.sub(r'(?<!@)[cjvCJV](?![0-9][0-9][0-9])', lambda m: m.group().translate(tr), search_term)
 
     l = Lark(grammar, lexer='basic', propagate_positions=True)
     try:

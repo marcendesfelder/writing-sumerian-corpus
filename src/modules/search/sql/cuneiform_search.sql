@@ -213,7 +213,7 @@ CREATE FUNCTION component_no(cun_position)
     LANGUAGE C
     IMMUTABLE STRICT;
 
-CREATE FUNCTION cun_position(bigint, integer, bool)
+CREATE FUNCTION cun_position(integer, integer, bool)
     RETURNS cun_position
     AS 'cuneiform_search', 'position_construct'
     LANGUAGE C
@@ -226,28 +226,28 @@ CREATE OR REPLACE FUNCTION uniq (VARIADIC cun_position[])
     RETURNS bool
     AS 'cuneiform_search', 'unique'
     LANGUAGE C
-    IMMUTABLE
+    IMMUTABLE STRICT
     COST 10;
 
 CREATE OR REPLACE FUNCTION consecutive (VARIADIC cun_position[])
     RETURNS bool
     AS 'cuneiform_search', 'consecutive'
     LANGUAGE C
-    IMMUTABLE
+    IMMUTABLE STRICT
     COST 10;
 
-CREATE OR REPLACE FUNCTION get_sign_nos (VARIADIC cun_position[])
+CREATE OR REPLACE FUNCTION get_sign_nos (VARIADIC cun_position[] DEFAULT '{}')
     RETURNS int[]
     AS 'cuneiform_search', 'get_sign_nos'
     LANGUAGE C
-    IMMUTABLE
+    IMMUTABLE STRICT
     COST 10;
 
-CREATE OR REPLACE FUNCTION sort_uniq_remove_null (VARIADIC integer[])
+CREATE OR REPLACE FUNCTION sort_uniq_remove_null (VARIADIC integer[] DEFAULT '{}')
     RETURNS int[]
     AS 'cuneiform_search', 'sort_uniq_remove_null'
     LANGUAGE C
-    IMMUTABLE
+    IMMUTABLE STRICT
     COST 10;
 
 
@@ -281,21 +281,29 @@ SELECT
     'v' || value_id::text || 's' || sign_variant_id::text
 FROM
     @extschema:cuneiform_signlist@.glyph_values 
-    JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (glyph_ids)
+    JOIN @extschema:cuneiform_signlist@.values USING (value_id)
+    JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_id, glyph_ids)
     LEFT JOIN LATERAL generate_series(1, 2) AS _(i) ON TRUE;
 
 
 CREATE VIEW signs_search (sign, sign_spec, code) AS
 SELECT
     upper(value),
-    CASE WHEN i = 1 THEN NULL ELSE glyphs END,
+    NULL,
+    'S' || sign_id::text
+FROM
+    @extschema:cuneiform_signlist@.value_variants
+    LEFT JOIN @extschema:cuneiform_signlist@.values USING (value_id)
+UNION
+SELECT
+    upper(value),
+    glyphs,
     's' || sign_variant_id::text
 FROM
     @extschema:cuneiform_signlist@.value_variants
     LEFT JOIN @extschema:cuneiform_signlist@.values USING (value_id)
     JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_id)
-    LEFT JOIN LATERAL generate_series(1, 2) AS _(i) ON TRUE
-    UNION ALL
+UNION
 SELECT
     upper(value),
     CASE WHEN i = 1 THEN NULL ELSE glyphs END,
@@ -303,100 +311,83 @@ SELECT
 FROM
     @extschema:cuneiform_signlist@.glyph_values 
     JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (glyph_ids)
-    LEFT JOIN LATERAL generate_series(1, 2) AS _(i) ON TRUE;
-
-
-CREATE VIEW sign_descriptions_search (sign, sign_spec, code) AS
+    LEFT JOIN LATERAL generate_series(1, 2) AS _(i) ON TRUE
+UNION
+SELECT
+    glyphs,
+    NULL,
+    'S' || sign_id::text
+FROM
+    @extschema:cuneiform_signlist@.sign_variants_composition
+WHERE
+    specific
+UNION
 SELECT
     a.glyphs,
-    CASE WHEN i = 1 THEN NULL ELSE b.glyphs END,
+    b.glyphs,
     's' || b.sign_variant_id::text
 FROM
     @extschema:cuneiform_signlist@.sign_variants_composition a
     JOIN @extschema:cuneiform_signlist@.sign_variants_composition b USING (sign_id)
-    LEFT JOIN LATERAL generate_series(1, 2) AS _(i) ON TRUE
 WHERE
     a.specific;
 
 
 CREATE OR REPLACE VIEW forms_search (form, sign_spec, code) AS
-WITH graphemes AS (
-    SELECT
-        sign_id,
-        allomorph_id,
-        pos,
-        '(g' || grapheme_id::text || '|' || string_agg('c' || glyph_id::text, '|') || ')' AS code
-    FROM
-        @extschema:cuneiform_signlist@.allomorphs
-        LEFT JOIN @extschema:cuneiform_signlist@.allomorph_components USING (allomorph_id)
-        LEFT JOIN @extschema:cuneiform_signlist@.allographs USING (grapheme_id)
-    WHERE 
-        allomorphs.specific AND allographs.specific
-    GROUP BY 
-        sign_id,
-        allomorph_id,
-        grapheme_id,
-        pos
-)
 SELECT
     upper(value),
     NULL,
-    string_agg(code, '~' ORDER BY pos)
-FROM
-    @extschema:cuneiform_signlist@.value_variants
-    LEFT JOIN @extschema:cuneiform_signlist@.values USING (value_id)
-    LEFT JOIN graphemes USING (sign_id)
-GROUP BY
-    value,
-    allomorph_id
-UNION ALL
-SELECT
-    upper(value),
-    glyphs,
-    string_agg('c' || glyph_id::text, '~' ORDER BY pos)
+    'g' || grapheme_ids[1]::text
 FROM
     @extschema:cuneiform_signlist@.value_variants
     LEFT JOIN @extschema:cuneiform_signlist@.values USING (value_id)
     LEFT JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_id)
-    LEFT JOIN LATERAL unnest(glyph_ids) WITH ORDINALITY AS _(glyph_id, pos) ON TRUE
-GROUP BY
-    value,
-    sign_variant_id,
-    glyphs
-UNION ALL
+WHERE
+    cardinality(grapheme_ids) = 1
+    AND specific
+UNION
 SELECT
     upper(value),
-    CASE WHEN i = 1 THEN NULL ELSE string_agg(glyph, '.' ORDER BY pos) END,
-    string_agg('c' || glyph_id::text, '~')
+    glyphs,
+    'g' || grapheme_ids[1]::text || 'c' || glyph_ids[1]::text
+FROM
+    @extschema:cuneiform_signlist@.value_variants
+    LEFT JOIN @extschema:cuneiform_signlist@.values USING (value_id)
+    LEFT JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_id)
+WHERE
+    cardinality(grapheme_ids) = 1
+    AND specific
+UNION
+SELECT
+    upper(value),
+    CASE WHEN i = 1 THEN NULL ELSE glyphs END,
+    'c' || glyph_ids[1]::text
+FROM
+    @extschema:cuneiform_signlist@.value_variants
+    LEFT JOIN @extschema:cuneiform_signlist@.values USING (value_id)
+    LEFT JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_id)
+    LEFT JOIN LATERAL generate_series(1, 2) AS _(i) ON TRUE
+WHERE
+    cardinality(grapheme_ids) = 1
+    AND specific
+UNION
+SELECT
+    upper(value),
+    CASE WHEN i = 1 THEN NULL ELSE glyphs END,
+    'g' || grapheme_ids[1]::text || 'c' || sign_variants_composition.glyph_ids[1]::text
 FROM
     @extschema:cuneiform_signlist@.glyph_values
-    LEFT JOIN LATERAL unnest(glyph_ids) WITH ORDINALITY AS _(glyph_id, pos) ON TRUE
-    LEFT JOIN @extschema:cuneiform_signlist@.glyphs USING (glyph_id)
+    JOIN @extschema:cuneiform_signlist@.values USING (value_id)
+    JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_id, glyph_ids)
     LEFT JOIN LATERAL generate_series(1, 2) AS __(i) ON TRUE
-GROUP BY
-    value,
-    i;
-
-CREATE OR REPLACE VIEW form_descriptions_search (form, sign_spec, code) AS
-SELECT
-    grapheme,
-    NULL,
-    'g' || grapheme_id::text
-FROM
-    @extschema:cuneiform_signlist@.graphemes
-UNION ALL
-SELECT
-    grapheme,
-    glyph,
-    'c' || glyph_id::text
-FROM
-    @extschema:cuneiform_signlist@.graphemes
-    LEFT JOIN @extschema:cuneiform_signlist@.allographs USING (grapheme_id)
-    LEFT JOIN @extschema:cuneiform_signlist@.glyphs USING (glyph_id)
-UNION ALL
+WHERE
+    cardinality(grapheme_ids) = 1
+    AND specific
+UNION
 SELECT
     glyph,
-    NULL,
+    CASE WHEN i = 1 THEN NULL ELSE glyph END,
     'c' || glyph_id::text
 FROM
-    glyphs;
+    @extschema:cuneiform_signlist@.glyphs
+    LEFT JOIN LATERAL generate_series(1, 2) AS __(i) ON TRUE;

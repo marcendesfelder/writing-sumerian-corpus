@@ -6,9 +6,9 @@ CREATE TABLE corpus_search (
   compound_no integer,
   line_no integer,
   value_id integer,
-  sign_variant_id integer,
-  grapheme_id integer,
-  glyph_id integer,
+  sign boolean,
+  meaning_id integer,
+  form_id integer,
   type @extschema:cuneiform_sign_properties@.sign_type,
   indicator_type @extschema:cuneiform_sign_properties@.indicator_type,
   phonographic boolean
@@ -17,20 +17,16 @@ CREATE TABLE corpus_search (
 CREATE INDEX ON corpus_search (transliteration_id);
 CREATE INDEX ON corpus_search (value_id) WHERE value_id IS NOT NULL;
 CREATE INDEX ON corpus_search (transliteration_id, value_id) WHERE value_id IS NOT NULL;
-CREATE INDEX ON corpus_search (sign_variant_id) WHERE sign_variant_id IS NOT NULL;
-CREATE INDEX ON corpus_search (transliteration_id, sign_variant_id) WHERE sign_variant_id IS NOT NULL;
-CREATE INDEX ON corpus_search (grapheme_id) WHERE grapheme_id IS NOT NULL;
-CREATE INDEX ON corpus_search (transliteration_id, grapheme_id) WHERE grapheme_id IS NOT NULL;
-CREATE INDEX ON corpus_search (glyph_id) WHERE glyph_id IS NOT NULL;
-CREATE INDEX ON corpus_search (transliteration_id, glyph_id) WHERE glyph_id IS NOT NULL;
+CREATE INDEX ON corpus_search (sign, meaning_id);
+CREATE INDEX ON corpus_search (transliteration_id, sign, meaning_id);
+CREATE INDEX ON corpus_search (sign, form_id);
+CREATE INDEX ON corpus_search (transliteration_id, sign, form_id);
 CREATE INDEX corpus_search_transliteration_id_position_ix ON corpus_search (transliteration_id, position);
 CLUSTER corpus_search USING corpus_search_transliteration_id_position_ix;
 
 ALTER TABLE corpus_search ALTER COLUMN value_id SET STATISTICS 1000;
-ALTER TABLE corpus_search ALTER COLUMN sign_variant_id SET STATISTICS 1000;
-ALTER TABLE corpus_search ALTER COLUMN grapheme_id SET STATISTICS 1000;
-ALTER TABLE corpus_search ALTER COLUMN glyph_id SET STATISTICS 1000;
-
+ALTER TABLE corpus_search ALTER COLUMN meaning_id SET STATISTICS 1000;
+ALTER TABLE corpus_search ALTER COLUMN form_id SET STATISTICS 1000;
 
 CREATE OR REPLACE FUNCTION corpus_search_update_marginals (
     v_transliteration_id integer
@@ -153,7 +149,7 @@ BEGIN
     corpus.transliteration_id = corpus_search.transliteration_id
     AND corpus.sign_no = corpus_search.sign_no
     AND corpus.sign_variant_id = (OLD).sign_variant_id
-    AND corpus_search.sign_variant_id IS NULL;
+    AND NOT sign;
   
   INSERT INTO @extschema@.corpus_search 
   SELECT corpus_search_view.*
@@ -162,7 +158,7 @@ BEGIN
     JOIN @extschema@.corpus_search_view USING (transliteration_id, sign_no)
   WHERE
     corpus.sign_variant_id = (OLD).sign_variant_id
-    AND corpus_search_view.sign_variant_id IS NULL;
+    AND NOT sign;
   
   RETURN NULL;
 
@@ -230,9 +226,9 @@ SELECT * FROM (
     compound_no,
     line_no,
     NULL AS value_id,
-    NULL AS sign_variant_id,
-    grapheme_id,
-    glyph_id,
+    FALSE AS sign,
+    grapheme_id AS meaning_id,
+    glyph_id AS form_id,
     type,
     indicator_type,
     phonographic
@@ -252,14 +248,15 @@ SELECT * FROM (
     compound_no,
     line_no,
     value_id,
-    sign_variant_id,
-    NULL AS grapheme_id,
-    NULL AS glyph_id,
+    CASE WHEN sign_variant_id IS NOT NULL THEN TRUE ELSE NULL END AS sign,
+    sign_id AS meaning_id,
+    sign_variant_id AS form_id,
     type,
     indicator_type,
     phonographic
   FROM 
     x
+    LEFT JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_variant_id)
   UNION ALL
   SELECT                      -- pseudo first row
     transliteration_id,
@@ -269,9 +266,9 @@ SELECT * FROM (
     min(compound_no)-1 AS compound_no,
     min(line_no)-1 AS line_no,
     NULL AS value_id,
-    NULL AS sign_variant_id,
-    NULL AS grapheme_id,
-    NULL AS glyph_id,
+    NULL AS sign,
+    NULL AS meaning_id,
+    NULL AS form_id,
     NULL AS type,
     NULL AS indicator_type,
     NULL AS phonographic
@@ -291,9 +288,9 @@ SELECT * FROM (
     max(compound_no)+1 AS compound_no,
     max(line_no)+1 AS line_no,
     NULL AS value_id,
-    NULL AS sign_variant_id,
-    NULL AS grapheme_id,
-    NULL AS glyph_id,
+    NULL AS sign,
+    NULL AS meaning_id,
+    NULL AS form_id,
     NULL AS type,
     NULL AS indicator_type,
     NULL AS phonographic
@@ -310,9 +307,9 @@ SELECT * FROM (
     NULL AS compound_no,
     NULL AS line_no,
     NULL AS value_id,
-    NULL AS sign_variant_id,
-    NULL AS grapheme_id,
-    NULL AS glyph_id,
+    NULL AS sign,
+    NULL AS meaning_id,
+    NULL AS form_id,
     NULL AS type,
     NULL AS indicator_type,
     NULL AS phonographic
