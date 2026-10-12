@@ -15,7 +15,7 @@ alt             : ( line | paren | _part ) ( _BAR ( line | paren | _part ) )+
 alt_noline      : ( paren_noline | _part ) ( _BAR ( paren_noline | _part ) )+       -> alt
 
 _part           : ( lindicator nullsep )* _char_a ( nullsep rindicator )* 
-                | _indicator+
+                | _indicator
 lindicator      : _indicator
 rindicator      : _indicator 
 _indicator      : det 

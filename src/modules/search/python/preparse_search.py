@@ -17,7 +17,7 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
         
         VALUE_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.values_search WHERE value = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         PATTERN_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.values_search WHERE value ~ $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
-        VALUEX_SPEC_PLAN = plpy.prepare("SELECT array_agg('s' || sign_variant_id::text) AS codes FROM @extschema:cuneiform_signlist@.sign_variants_composition WHERE glyphs = $1 AND specific", ["text"])
+        VALUEX_SPEC_PLAN = plpy.prepare("SELECT array_agg('s' || sign_variant_id::text) AS codes FROM @extschema:cuneiform_signlist@.sign_variants_composition WHERE glyphs = $1", ["text"])
         SIGN_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.signs_search WHERE sign = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         FORM_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.forms_search WHERE form = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         NORMALIZE_GLYPHS_PLAN = plpy.prepare("SELECT @extschema:cuneiform_signlist@.normalize_glyphs($1)", ["text"])
@@ -42,7 +42,7 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
 
         def valuex(spec):
             codes = plpy.execute(DB.VALUEX_SPEC_PLAN, [DB.normalizeGlyphs(spec)])[0]['codes']
-            if len(codes) != 1:
+            if not codes:
                 raise ValueError
             return codes[0]
 

@@ -26,7 +26,9 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         WORDCON = 10
         COMPOUNDCON = 11
         WC = 12
-        PSEUDO = 14
+        LBRACKET = 13
+        RBRACKET = 14
+        PSEUDO = 15
 
 
     class Token:
@@ -45,25 +47,13 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             self.type = TokenType.PSEUDO if pseudo else TokenType.CHAR
             self.id = id
             self.condition = condition
-            self.lineId = None
             self.matched = True
 
 
     class T(Transformer):
 
-        def make_condition(id, value_id, sign_variant_id):
-            c = []
-            if value_id is not None:
-                c.append(f"c{id}.value_id = {value_id}")
-            if sign_variant_id is not None:
-                c.append(f"c{id}.sign_variant_id = {sign_variant_id}")
-            return '('+" AND ".join(c)+')'
-
-
         def __init__(self):
             self.id = 0
-            self.wordId = 0
-            self.lineId = 0
 
         def __default_token__(self, token):
             return token.value
@@ -75,14 +65,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             return res 
 
         def line(self, args):
-            res = []
-            for arg in args:
-                for c in arg:
-                    if c.type == TokenType.CHAR:
-                        c.lineId = self.lineId
-                    res.append(c)
-            self.lineId += 1
-            return res
+            return [Token(TokenType.LBRACKET)] + list(itertools.chain.from_iterable(args)) + [Token(TokenType.RBRACKET)]
 
         def paren_asterisk(self, args):
             res = []
@@ -155,7 +138,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
 
         @v_args(inline=True)
         def numberx(self):
-            return f"{{table}}.type = 'number'"
+            return f"{{table}}.sign IS DISTINCT FROM FALSE AND {{table}}.type = 'number'"
 
 
         def wordbreak(self, args):
@@ -202,8 +185,10 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         def __init__(self):
             self.ids = []
             self.matchIds = []
+            self.maybePseudoIds = set()
             self.ops = []
             self.wildcard = None
+            self.lineAnchor = None
 
         def list(self, column):
             return ', '.join(f"c{id}.{column}" for id in self.ids)
@@ -230,6 +215,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             super().__init__()
             self.id = id
             self.ids.append(id)
+            self.maybePseudoIds = {id}
             self.condition = f"c{id}.position IS NULL"
 
     
@@ -247,6 +233,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         def append(self, table):
             self.ids += table.ids
             self.matchIds += table.matchIds
+            self.maybePseudoIds |= table.maybePseudoIds
             self.tables.append(table)
             if not isinstance(table, DummyTable):
                 self.end += 1
@@ -277,6 +264,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                 for id in table1.ids[len(table2.ids):]:
                     table2.append(DummyTable(id))
             self.matchIds = list(set(table1.matchIds+table2.matchIds))
+            self.maybePseudoIds |= table1.maybePseudoIds | table2.maybePseudoIds
             self.tables = [table1, table2]
 
         def replaceIds(table, idMap):
@@ -288,6 +276,8 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                     AlternativeTable.replaceIds(t, idMap)
             table.ids = [idMap[id] for id in table.ids]
             table.matchIds = [idMap[id] for id in table.matchIds]
+            table.lineAnchor = idMap.get(table.lineAnchor, table.lineAnchor)
+            table.maybePseudoIds = {idMap.get(i, i) for i in table.maybePseudoIds}
 
         def first(self, column):
             a = self.tables[0].first(column)
@@ -303,10 +293,6 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
 
     class Translator:
         def __init__(self, tokens):
-            self.words = []
-            self.lines = {}
-            self.front = None
-            self.back = None
             self.table, _ = self.process(tokens)
 
 
@@ -351,13 +337,21 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         def join(table):
             conditions = []
 
+            if table.lineAnchor is not None:
+                for id in table.ids:
+                    if id != table.lineAnchor:
+                        if id in table.maybePseudoIds:
+                            conditions.append(f"COALESCE(c{id}.line_no = c{table.lineAnchor}.line_no, TRUE)")
+                        else:
+                            conditions.append(f"c{id}.line_no = c{table.lineAnchor}.line_no")
+
             if isinstance(table, SingleTable) or isinstance(table, DummyTable):
-                return [table.condition]
+                return conditions + [table.condition]
 
             if isinstance(table, AlternativeTable):
                 c1 = ' AND '.join(Translator.join(table.tables[0]))
                 c2 = ' AND '.join(Translator.join(table.tables[1]))
-                return [f"(({c1}) OR ({c2}))"]
+                return conditions + [f"(({c1}) OR ({c2}))"]
 
             if table.unordered:
                 conditions.append(f"@extschema@.consecutive({table.list('position')})")
@@ -390,6 +384,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         def process(self, tokens):
             tables = []
             ops = []
+            lineAnchor = None
             i = 0
             while i < len(tokens):
                 if tokens[i].type in [TokenType.CHAR, TokenType.PSEUDO, TokenType.LPAREN]:
@@ -398,16 +393,23 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                         ops = []
                     if tokens[i].type == TokenType.CHAR or tokens[i].type == TokenType.PSEUDO:
                         tables.append(SingleTable(tokens[i]))
-                        if tokens[i].lineId is not None:
-                            self.lines.setdefault(tokens[i].lineId, []).append(tables[-1])
                     else:
                         t, n = self.process(tokens[i+1:])
                         tables.append(t)
                         i += n 
+                    if lineAnchor == -1:
+                        lineAnchor = tables[-1].ids[0]
+                    if lineAnchor is not None:
+                        tables[-1].lineAnchor = lineAnchor
+
                 elif tokens[i].type == TokenType.RPAREN:
                     break
                 elif tokens[i].type == TokenType.WC:
                     tables[-1].wildcard = tokens[i].id
+                elif tokens[i].type == TokenType.LBRACKET:
+                    lineAnchor = -1
+                elif tokens[i].type == TokenType.RBRACKET:
+                    lineAnchor = None
                 else:
                     ops.append(tokens[i].type)
                 i += 1
@@ -436,9 +438,6 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             for col in targetKey:
                 for id in self.table.ids[1:]:
                     conditions.append(f"c{self.table.ids[0]}.{col} = c{id}.{col}")
-            for line in self.lines.values():
-                lineNos = ', '.join(f"c{id}.line_no" for table in line for id in table.ids)
-                conditions.append(f"LEAST({lineNos}) = GREATEST({lineNos})")
 
             fromClause = ', '.join(f"{plpy.quote_ident(targetSchema)}.{plpy.quote_ident(targetTable)} c{id}" for id in self.table.ids)
             whereClause = ' AND '.join(conditions)
