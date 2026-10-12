@@ -253,30 +253,46 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         def __init__(self, table1, table2):
             super().__init__()
             self.ops = table2.ops
-            if len(table1.ids) < len(table2.ids):
-                table1, table2 = table2, table1
-            self.ids = table1.ids
-            idMap = dict(zip(table2.ids, table1.ids))
+            # Ids are only shared between tables of the same reported status, as there is no way
+            # to tell which branch matched. Unshared ids are padded with dummies in the other branch.
+            matched1, unreported1 = AlternativeTable.partition(table1)
+            matched2, unreported2 = AlternativeTable.partition(table2)
+            idMap = dict(zip(matched2, matched1)) | dict(zip(unreported2, unreported1))
             AlternativeTable.replaceIds(table2, idMap)
-            if len(table2.ids) < len(table1.ids):
-                if not isinstance(table2, ComplexTable):
-                    table2 = ComplexTable([table2])
-                for id in table1.ids[len(table2.ids):]:
-                    table2.append(DummyTable(id))
-            self.matchIds = list(set(table1.matchIds+table2.matchIds))
+            only1 = [id for id in table1.ids if id not in table2.ids]
+            only2 = [id for id in table2.ids if id not in table1.ids]
+            table1 = AlternativeTable.pad(table1, only2)
+            table2 = AlternativeTable.pad(table2, only1)
+            self.ids = list(table1.ids)
+            self.matchIds = [id for id in self.ids if id in table1.matchIds or id in table2.matchIds]
             self.maybePseudoIds |= table1.maybePseudoIds | table2.maybePseudoIds
             self.tables = [table1, table2]
 
+        def partition(table):
+            matched = [id for id in table.ids if id in table.matchIds]
+            unreported = [id for id in table.ids if id not in table.matchIds]
+            return matched, unreported
+
+        def pad(table, ids):
+            if not ids:
+                return table
+            if not isinstance(table, ComplexTable):
+                table = ComplexTable([table])
+            for id in ids:
+                table.append(DummyTable(id))
+            return table
+
         def replaceIds(table, idMap):
             if isinstance(table, SingleTable) or isinstance(table, DummyTable):
-                table.condition = table.condition.replace(f'c{table.id}.', f'c{idMap[table.id]}.')
-                table.id = idMap[table.id]
+                table.condition = table.condition.replace(f'c{table.id}.', f'c{idMap.get(table.id, table.id)}.')
+                table.id = idMap.get(table.id, table.id)
             else:
                 for t in table.tables:
                     AlternativeTable.replaceIds(t, idMap)
-            table.ids = [idMap[id] for id in table.ids]
-            table.matchIds = [idMap[id] for id in table.matchIds]
-            table.lineAnchor = idMap.get(table.lineAnchor, table.lineAnchor)
+            table.ids = [idMap.get(id, id) for id in table.ids]
+            table.matchIds = [idMap.get(id, id) for id in table.matchIds]
+            if table.lineAnchor is not None:
+                table.lineAnchor = [idMap.get(id, id) for id in table.lineAnchor]
             table.maybePseudoIds = {idMap.get(i, i) for i in table.maybePseudoIds}
 
         def first(self, column):
@@ -338,12 +354,16 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             conditions = []
 
             if table.lineAnchor is not None:
+                if len(table.lineAnchor) == 1:
+                    anchor = f"c{table.lineAnchor[0]}.line_no"
+                else:
+                    anchor = f"COALESCE({', '.join(f'c{id}.line_no' for id in table.lineAnchor)})"
                 for id in table.ids:
-                    if id != table.lineAnchor:
+                    if [id] != table.lineAnchor:
                         if id in table.maybePseudoIds:
-                            conditions.append(f"COALESCE(c{id}.line_no = c{table.lineAnchor}.line_no, TRUE)")
+                            conditions.append(f"COALESCE(c{id}.line_no = {anchor}, TRUE)")
                         else:
-                            conditions.append(f"c{id}.line_no = c{table.lineAnchor}.line_no")
+                            conditions.append(f"c{id}.line_no = {anchor}")
 
             if isinstance(table, SingleTable) or isinstance(table, DummyTable):
                 return conditions + [table.condition]
@@ -381,10 +401,20 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             return conditions
 
 
+        def anchorLine(tables):
+            # Anchor at a table that is never a dummy. If there is none (e.g. an alternative whose
+            # branches share no ids), anchor at the first non-null line_no among all tables instead.
+            ids = [id for table in tables for id in table.ids]
+            maybePseudoIds = set().union(*(table.maybePseudoIds for table in tables))
+            anchor = next(([id] for id in ids if id not in maybePseudoIds), ids)
+            for table in tables:
+                table.lineAnchor = anchor
+
+
         def process(self, tokens):
             tables = []
             ops = []
-            lineAnchor = None
+            lineTables = None
             i = 0
             while i < len(tokens):
                 if tokens[i].type in [TokenType.CHAR, TokenType.PSEUDO, TokenType.LPAREN]:
@@ -396,20 +426,19 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
                     else:
                         t, n = self.process(tokens[i+1:])
                         tables.append(t)
-                        i += n 
-                    if lineAnchor == -1:
-                        lineAnchor = tables[-1].ids[0]
-                    if lineAnchor is not None:
-                        tables[-1].lineAnchor = lineAnchor
+                        i += n
+                    if lineTables is not None:
+                        lineTables.append(tables[-1])
 
                 elif tokens[i].type == TokenType.RPAREN:
                     break
                 elif tokens[i].type == TokenType.WC:
                     tables[-1].wildcard = tokens[i].id
                 elif tokens[i].type == TokenType.LBRACKET:
-                    lineAnchor = -1
+                    lineTables = []
                 elif tokens[i].type == TokenType.RBRACKET:
-                    lineAnchor = None
+                    Translator.anchorLine(lineTables)
+                    lineTables = None
                 else:
                     ops.append(tokens[i].type)
                 i += 1

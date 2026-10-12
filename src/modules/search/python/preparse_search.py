@@ -18,6 +18,7 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
         VALUE_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.values_search WHERE value = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         PATTERN_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.values_search WHERE value ~ $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         VALUEX_SPEC_PLAN = plpy.prepare("SELECT array_agg('s' || sign_variant_id::text) AS codes FROM @extschema:cuneiform_signlist@.sign_variants_composition WHERE glyphs = $1", ["text"])
+        SIGNX_SPEC_PLAN = plpy.prepare("SELECT array_agg('c' || glyph_id::text) AS codes FROM @extschema:cuneiform_signlist@.glyphs WHERE glyph = $1", ["text"])
         SIGN_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.signs_search WHERE sign = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         FORM_PLAN = plpy.prepare("SELECT array_agg(code) AS codes FROM @extschema@.forms_search WHERE form = $1 and sign_spec IS NOT DISTINCT FROM $2", ["text", "text"])
         NORMALIZE_GLYPHS_PLAN = plpy.prepare("SELECT @extschema:cuneiform_signlist@.normalize_glyphs($1)", ["text"])
@@ -44,7 +45,13 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             codes = plpy.execute(DB.VALUEX_SPEC_PLAN, [DB.normalizeGlyphs(spec)])[0]['codes']
             if not codes:
                 raise ValueError
-            return codes[0]
+            return codes
+
+        def signx(spec):
+            codes = plpy.execute(DB.SIGNX_SPEC_PLAN, [DB.normalizeGlyphs(spec)])[0]['codes']
+            if not codes:
+                raise ValueError
+            return codes
 
         def sign(sign, spec):
             if re.search(r'[\.×&%@+]|[0-9][0-9][0-9]$', sign):
@@ -158,8 +165,14 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
         @v_args(meta=True)     
         def signx(self, meta, args):
             self.wildcardId += 1
-            self.wildcards.append((meta.start_pos, self.wildcardId, 'X', False))
-            return f'X@{self.wildcardId}', 'X'
+            if len(args) == 1:
+                self.wildcards.append((meta.start_pos, self.wildcardId, 'X', False))
+                return f'X@{self.wildcardId}', 'X'
+            codes = DB.signx(args[1])
+            s = '|'.join(codes)
+            w = f'X({args[1]})'
+            self.wildcards.append((meta.start_pos, self.wildcardId, w, False))
+            return f'({s})@{self.wildcardId}', w
 
         @v_args(meta=True)
         def valuex(self, meta, args):
@@ -167,10 +180,11 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
             if len(args) == 1:
                 self.wildcards.append((meta.start_pos, self.wildcardId, 'x', False))
                 return f'x@{self.wildcardId}', 'x'
-            code = DB.valuex(args[1])
+            codes = DB.valuex(args[1])
+            s = '|'.join(codes)
             w = f'x({args[1]})'
             self.wildcards.append((meta.start_pos, self.wildcardId, w, False))
-            return f'{code}@{self.wildcardId}', w
+            return f'({s})@{self.wildcardId}', w
 
         @v_args(meta=True)   
         def n(self, meta, args):

@@ -31,7 +31,7 @@ char            : VALUE _signspec?                      -> value
                 | signt _signspec?                      -> form
                 | _BAR complex_sign _BAR _signspec?     -> sign
                 | PATTERN _signspec?                    -> pattern
-                | _SIGNX                                -> signx
+                | _SIGNX _signspec?                     -> signx
                 | X _signspec?                          -> valuex
                 | _N                                    -> n
 _signspec       : "(" complex_sign ")"
