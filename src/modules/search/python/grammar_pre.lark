@@ -1,18 +1,24 @@
-start           : lanchor? _unit ( sep _unit )* ranchor?
-_unit           : line
-                | paren
-                | alt
+start           : segment_anchored
+                | alt_anchored
+
+alt             : segment ( _BAR segment )+
+alt_anchored    : segment_anchored ( _BAR segment_anchored )+                   -> alt
+alt_noline      : segment_noline ( _BAR segment_noline )+                       -> alt
+
+segment         : _group ( sep _group )*
+segment_anchored: lanchor? _group ( sep _group )* ranchor?                      -> segment
+segment_noline  : _group_noline ( sep _group_noline )*                          -> segment
+
+_group          : line
+                | asterisk? paren
+                | _part
+_group_noline   : asterisk? paren_noline
                 | _part
 
-_unit_noline    : paren_noline
-                | alt_noline
-                | _part
+line            : "[" segment_noline "]"
 
-line            : "[" ( _part | paren_noline ) ( sep ( _part | paren_noline ) )* "]"
-paren           : "(" _unit ( sep _unit )* ")"
-paren_noline    : "(" _unit_noline ( sep _unit_noline )* ")"                        -> paren
-alt             : ( line | paren | _part ) ( _BAR ( line | paren | _part ) )+
-alt_noline      : ( paren_noline | _part ) ( _BAR ( paren_noline | _part ) )+       -> alt
+paren           : "(" ( segment | alt ) ")"
+paren_noline    : "(" ( segment_noline | alt_noline ) ")"            -> paren
 
 _part           : ( lindicator nullsep )* _char_a ( nullsep rindicator )* 
                 | _indicator
@@ -23,16 +29,14 @@ _indicator      : det
 det             : "{" _char_a ( sep _char_a )* "}"
 pc              : "<" _char_a ( sep _char_a )* ">"
 
-_char_a         : char
-                | char_asterisk
-char_asterisk   : char _ASTERISK
+_char_a         : asterisk? char
 
 char            : VALUE _signspec?                      -> value
                 | signt _signspec?                      -> form
                 | _BAR complex_sign _BAR _signspec?     -> sign
                 | PATTERN _signspec?                    -> pattern
-                | _SIGNX _signspec?                     -> signx
-                | X _signspec?                          -> valuex
+                | _GLYPHX _signspec?                    -> graphemex
+                | X _signspec?                          -> signx
                 | _N                                    -> n
 _signspec       : "(" complex_sign ")"
 complex_sign    : signt ( "." signt )*
@@ -56,6 +60,7 @@ colon           : ":"
 wordbreak       : _WORDBREAK
 compoundbreak   : _COMPOUNDBREAK
 linebreak       : _NL
+asterisk        : "*"
 
 signt           : ( SIMPLESIGN | SIGNLISTSIGN ) MOD* ( ( SIGNCON | xcon ) ( signt | parensignt ) )*
                 | parensignt MOD+ ( ( SIGNCON | xcon ) ( signt | parensignt ) )*
@@ -70,12 +75,11 @@ VALUE.3         : /[abdegĝhḫijklmnpqrřsšṣtṭuwyz’][abdegĝhḫijklmnpq
 SIMPLESIGN.3    : /[ABDEGĜHḪIJKLMNPQRŘSŠṢTṬUWYZ’][ABDEGĜHḪIJKLMNPQRŘSŠṢTṬUWYZ’]+[0-9]*/
                 | /[AEIU][0-9]*/ 
 SIGNLISTSIGN.4  : /(ELLES|LAK|KWU|REC|RSP|UKN)[0-9][0-9][0-9]/
-_SIGNX.2        : "X"
+_GLYPHX.2        : "X"
 X.2             : "x"
 _N.2            : /[Nn]/
 _ELLIPSIS.2     : "…"|"..."
 _DOT.1          : "."
-_ASTERISK.1     : "*"
 _SPACE          : /[\t \f\n]+/
 _NL             : "//"
 MOD             : "@" ( /[tgšnkzicdfvabx]/ | "180" | "90" | "45" )

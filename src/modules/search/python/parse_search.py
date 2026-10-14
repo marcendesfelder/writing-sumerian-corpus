@@ -129,16 +129,16 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             return f'NOT {{table}}.sign AND {{table}}.form_id = {id}'
 
         @v_args(inline=True)
-        def signx(self):
+        def graphemex(self):
             return f'NOT {{table}}.sign'
 
         @v_args(inline=True)
-        def valuex(self):
-            return f'{{table}}.sign'
+        def signx(self):
+            return f"{{table}}.sign AND {{table}}.type != 'number'"
 
         @v_args(inline=True)
         def numberx(self):
-            return f"{{table}}.sign IS DISTINCT FROM FALSE AND {{table}}.type = 'number'"
+            return f"{{table}}.sign AND {{table}}.type = 'number'"
 
 
         def wordbreak(self, args):
@@ -164,18 +164,6 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
         
         def bar(self, args):
             return [Token(TokenType.BAR)]
-
-        def signspec(self, args):
-            return '.'.join(args)
-
-        def signt(self, args):
-            return ''.join(args)
-
-        def parensignt(self, args):
-            return '('+'.'.join(args)+')'
-
-        def xcon(self, args):
-            return '×'
 
         def wildcard(self, args):
             return int(args[0])
@@ -332,14 +320,6 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             return res
 
         def processAlternative(tables):
-            #res = []
-            #for table in tables:
-            #    if res and TokenType.BAR in res[-1].ops:
-            #        res[-1] = AlternativeTable(res[-1], table)
-            #    else:
-            #        res.append(table)
-            #return res
-
             ixs = [i+1 for i, table in enumerate(tables) if TokenType.BAR in table.ops]
             if not ixs:
                 return tables
@@ -449,8 +429,8 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
 
 
         def wildcards(self, table):
-            wildcards = {table.wildcard: table.matchIds} if table.matchIds and table.wildcard is not None else {}
-            if isinstance(table, ComplexTable):
+            wildcards = {table.wildcard: table.matchIds} if table.wildcard is not None else {}
+            if isinstance(table, ComplexTable) or isinstance(table, AlternativeTable):
                 for table in table.tables:
                     wildcards.update(self.wildcards(table))
             return wildcards
@@ -476,7 +456,7 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             lineMatchClause = '@extschema@.sort_uniq_remove_null('+', '.join(f"c{id}.line_no" for id in self.table.matchIds)+')'
             wildcardClause = self.translateWildcards()
 
-            return f'SELECT {keyCols}, {matchClause} AS signs, {wordMatchClause} AS words, {lineMatchClause} AS lines, {wildcardClause} AS wildcards FROM {fromClause} WHERE {whereClause}'
+            return f'SELECT DISTINCT {keyCols}, {matchClause} AS signs, {wordMatchClause} AS words, {lineMatchClause} AS lines, {wildcardClause} AS wildcards FROM {fromClause} WHERE {whereClause}'
 
 
     l = Lark(grammar, lexer='basic', maybe_placeholders=True)

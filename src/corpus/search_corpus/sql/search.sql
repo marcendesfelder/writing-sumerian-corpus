@@ -237,6 +237,28 @@ SELECT * FROM (
     JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_variant_id)
     LEFT JOIN LATERAL unnest(grapheme_ids, glyph_ids) WITH ORDINALITY a(grapheme_id, glyph_id, pos) ON TRUE
   UNION ALL
+  SELECT 
+    transliteration_id,
+    sign_no,
+    @extschema:cuneiform_search@.cun_position(
+      greatest(sign_no + 1, 0),
+      0, 
+      TRUE) AS position,
+    word_no,
+    compound_no,
+    line_no,
+    NULL AS value_id,
+    FALSE AS sign,
+    NULL AS meaning_id,
+    NULL AS form_id,
+    type,
+    indicator_type,
+    phonographic
+  FROM 
+    x
+  WHERE
+    type = 'damage' AND custom_value != '…'
+  UNION ALL
   SELECT
     transliteration_id,
     sign_no,
@@ -248,7 +270,7 @@ SELECT * FROM (
     compound_no,
     line_no,
     value_id,
-    CASE WHEN sign_variant_id IS NOT NULL THEN TRUE ELSE NULL END AS sign,
+    CASE WHEN type = 'sign' OR type = 'value' OR type = 'number' OR (type = 'damage' AND custom_value != '…') THEN TRUE ELSE NULL END AS sign,
     sign_id AS meaning_id,
     sign_variant_id AS form_id,
     type,

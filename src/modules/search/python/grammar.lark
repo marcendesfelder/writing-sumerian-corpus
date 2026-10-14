@@ -27,8 +27,8 @@ spec            : "v" NUMBER                    -> value
                 | "S" NUMBER                    -> sign
                 | "g" NUMBER                    -> grapheme
                 | "c" NUMBER                    -> glyph
-                | "x"                           -> valuex
-                | "X"                           -> signx
+                | "x"                           -> signx
+                | "X"                           -> graphemex
                 | "n"                           -> numberx
 
 wildcard        : "@" NUMBER
