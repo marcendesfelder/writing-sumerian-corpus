@@ -2,8 +2,6 @@
 
 #include "../../print_core/src/cuneiform_print_core.h"
 
-#include <math.h>
-
 #include <fmgr.h>
 #include <utils/builtins.h>
 #include <access/htup_details.h>
@@ -67,7 +65,7 @@ void _PG_init(void)
 
 
 #define EXP_LINE_LEN          1000
-#define MAX_EXTRA_LINE_LEN     200
+#define MAX_EXTRA_LINE_LEN     300
 
 #define ARG_VALUE                1
 #define ARG_SIGN_NO              2
@@ -541,7 +539,7 @@ Datum cuneiform_cun_agg_html_finalfunc(PG_FUNCTION_ARGS)
     htmlstate = (htmlState*) PG_GETARG_POINTER(0);
     state = htmlstate->state;
     
-    lines = copy_print_result(state);
+    lines = copy_print_result(state, state->compound_comment_len + MAX_EXTRA_LINE_LEN);
 
     string = DatumGetTextPP(lines[state->line_count-1]);
     s = VARDATA(string) + state->line_lens[state->line_count-1];

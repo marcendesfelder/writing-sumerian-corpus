@@ -319,11 +319,11 @@ int cun_get_changes(const State* s1, const State* s2)
 }
 
 
-Datum* cun_copy_print_result(const State *state)
+Datum* cun_copy_print_result(const State *state, int extra_size)
 {
     char *p;
     Datum* lines = (Datum*) palloc0(state->line_count * sizeof(Datum));
-    int texts_size = 500;
+    int texts_size = extra_size;
     for(int i = 0; i < state->line_count; ++i)
         texts_size += state->line_lens[i] + VARHDRSZ;
     p = palloc0(texts_size);

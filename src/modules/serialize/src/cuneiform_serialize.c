@@ -1,8 +1,6 @@
 #include "cuneiform_serialize.h"
 #include "../../print_core/src/cuneiform_print_core.h"
 
-#include <math.h>
-
 #include <fmgr.h>
 #include <utils/builtins.h>
 #include <access/htup_details.h>
@@ -408,7 +406,7 @@ Datum cuneiform_cun_agg_finalfunc(PG_FUNCTION_ARGS)
 
     state = (State*) PG_GETARG_POINTER(0);
     
-    lines = copy_print_result(state);
+    lines = copy_print_result(state, state->compound_comment_len + MAX_EXTRA_LINE_LEN);
 
     string = DatumGetTextPP(lines[state->line_count-1]);
     s = VARDATA(string) + state->line_lens[state->line_count-1];

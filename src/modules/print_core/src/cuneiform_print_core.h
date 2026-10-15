@@ -167,7 +167,7 @@ typedef State *(*cun_init_state_t)(int line_capacity, MemoryContext memcontext);
 typedef char *(*cun_add_line_t)(int capacity, State *state, MemoryContext memcontext);
 typedef char *(*cun_get_cursor_t)(int len, State *state);
 typedef int (*cun_get_changes_t)(const State *s1, const State *s2);
-typedef Datum *(*cun_copy_print_result_t)(const State *state);
+typedef Datum *(*cun_copy_print_result_t)(const State *state, int extra_size);
 typedef Connector (*cun_determine_connector_t)(const State *s1, const State *s2, bool inverted, bool newline, bool ligature);
 typedef Oid (*cun_opened_condition_start_t)(const char *s, size_t n, bool *no_condition);
 typedef Oid (*cun_opened_condition_end_t)(const char *s, size_t n);
@@ -176,7 +176,7 @@ extern PGDLLEXPORT State *cun_init_state(int line_capacity, MemoryContext memcon
 extern PGDLLEXPORT char *cun_add_line(int capacity, State *state, MemoryContext memcontext);
 extern PGDLLEXPORT char *cun_get_cursor(int len, State *state);
 extern PGDLLEXPORT int cun_get_changes(const State *s1, const State *s2);
-extern PGDLLEXPORT Datum* cun_copy_print_result(const State *state);
+extern PGDLLEXPORT Datum* cun_copy_print_result(const State *state, int extra_size);
 extern PGDLLEXPORT Connector cun_determine_connector(const State *s1, const State *s2, bool inverted, bool newline, bool ligature);
 extern PGDLLEXPORT Oid cun_opened_condition_start(const char *s, size_t n, bool *no_condition);
 extern PGDLLEXPORT Oid cun_opened_condition_end(const char *s, size_t n);
