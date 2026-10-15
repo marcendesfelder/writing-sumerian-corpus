@@ -7,8 +7,6 @@ CREATE TABLE corpus_unencoded (
     PRIMARY KEY (transliteration_id, sign_no)
 );
 
-CREATE INDEX ON corpus_unencoded (type);
-
 
 CREATE OR REPLACE VIEW corpus_unencoded_view AS
 SELECT
@@ -16,13 +14,13 @@ SELECT
     sign_no,
     a[1] AS value,
     left(a[2], -1) AS sign_spec,
-    type
+    a[1] !~ '^’?[bdgĝhḫjklmnpqrřsšṣtṭwyzaeiu]|^II$' AS unknown_reading
 FROM
     @extschema:cuneiform_corpus@.corpus
     LEFT JOIN LATERAL regexp_split_to_array(custom_value, '(?<=[0-9a-zA-ZŠšḪḫŘřĝĜṣṢṭṬ])\(') AS _(a) ON TRUE
 WHERE
     custom_value IS NOT NULL
-    AND (type = 'value' OR type = 'sign');
+    AND type = 'sign';
 
 
 CALL create_corpus_encoder('corpus_encoder', 'corpus_unencoded', '{transliteration_id}', '@extschema@');
@@ -45,7 +43,7 @@ WHERE
     AND corpus_encoder.sign_variant_id IS NOT NULL
     AND corpus.transliteration_id = corpus_encoder.transliteration_id
     AND corpus.sign_no = corpus_encoder.sign_no
-    AND corpus.type = corpus_encoder.type;
+    AND corpus.type = 'sign';
 
 DELETE FROM @extschema@.corpus_unencoded 
 USING @extschema:cuneiform_corpus@.corpus 
@@ -71,7 +69,7 @@ SELECT
     sign_no,
     COALESCE(value, graphemes),
     glyphs,
-    type
+    value_id IS NULL
 FROM
     @extschema:cuneiform_corpus@.corpus 
     LEFT JOIN @extschema:cuneiform_signlist@.sign_variants_composition USING (sign_variant_id)

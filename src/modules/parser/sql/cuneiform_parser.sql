@@ -3,7 +3,7 @@ CREATE TYPE corpus_parsed_unencoded_type AS (
     sign_no integer,
     value text,
     sign_spec text,
-    type @extschema:cuneiform_sign_properties@.sign_type,
+    unknown_reading boolean,
     line_no_code integer,
     start_col_code integer,
     stop_col_code integer
@@ -59,7 +59,8 @@ CREATE TYPE corpus_parser_type AS (
     word_no integer, 
     value text, 
     sign_spec text, 
-    type @extschema:cuneiform_sign_properties@.sign_type,  
+    type @extschema:cuneiform_sign_properties@.sign_type,
+    unknown_reading boolean,
     indicator_type @extschema:cuneiform_sign_properties@.indicator_type,
     phonographic boolean,
     condition @extschema:cuneiform_sign_properties@.sign_condition,
@@ -78,7 +79,8 @@ CREATE TYPE corpus_parser_ext_type AS (
     word_no integer, 
     value text, 
     sign_spec text, 
-    type @extschema:cuneiform_sign_properties@.sign_type,  
+    type @extschema:cuneiform_sign_properties@.sign_type,
+    unknown_reading boolean,
     indicator_type @extschema:cuneiform_sign_properties@.indicator_type,
     phonographic boolean,
     condition @extschema:cuneiform_sign_properties@.sign_condition,
@@ -158,14 +160,14 @@ corpus_unencoded_plan = plpy.prepare(
         ordinality::integer-1, 
         value, 
         sign_spec, 
-        type,
+        unknown_reading,
         line_no_code,
         start_col_code,
         stop_col_code
     FROM
         UNNEST($1) WITH ORDINALITY
     WHERE
-        type = 'value' OR type = 'sign'
+        type = 'sign'
         """, 
     ['@extschema@.corpus_parser_ext_type[]']
 )
@@ -345,9 +347,9 @@ plan = plpy.prepare(
             corpus
             LEFT JOIN UNNEST($2) WITH ORDINALITY AS words ON corpus.word_no = words.ordinality-1
             LEFT JOIN LATERAL @extschema:cuneiform_signlist@.normalize_glyphs(sign_spec) AS _(sign_spec_normlized) ON TRUE
-            LEFT JOIN LATERAL @extschema:cuneiform_signlist@.normalize_glyphs(value) AS __(sign_normalized) ON type = 'sign'
-            LEFT JOIN @extschema:cuneiform_encoder@.values_encoded ON type = 'value' AND corpus.value = values_encoded.value AND sign_spec_normlized IS NOT DISTINCT FROM values_encoded.sign_spec
-            LEFT JOIN @extschema:cuneiform_encoder@.signs_encoded ON type = 'sign' AND sign_normalized = signs_encoded.sign AND sign_spec_normlized IS NOT DISTINCT FROM signs_encoded.sign_spec
+            LEFT JOIN LATERAL @extschema:cuneiform_signlist@.normalize_glyphs(value) AS __(sign_normalized) ON unknown_reading
+            LEFT JOIN @extschema:cuneiform_encoder@.values_encoded ON NOT unknown_reading AND corpus.value = values_encoded.value AND sign_spec_normlized IS NOT DISTINCT FROM values_encoded.sign_spec
+            LEFT JOIN @extschema:cuneiform_encoder@.signs_encoded ON unknown_reading AND sign_normalized = signs_encoded.sign AND sign_spec_normlized IS NOT DISTINCT FROM signs_encoded.sign_spec
             LEFT JOIN @extschema:cuneiform_signlist@.sign_variants ON sign_variants.sign_variant_id = COALESCE(values_encoded.sign_variant_id, signs_encoded.sign_variant_id)
         GROUP BY
             compound_no

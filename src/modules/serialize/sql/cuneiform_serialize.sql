@@ -149,7 +149,7 @@ CREATE OR REPLACE FUNCTION serialize_sign_meanings (v_sign_meanings @extschema:c
   LANGUAGE SQL
 BEGIN ATOMIC
     SELECT
-        (cun_agg (character_print, ordinality::integer, word_no, 0, NULL, 0, (CASE WHEN unnest.value_id IS NULL THEN 'sign' ELSE 'value' END)::@extschema:cuneiform_sign_properties@.sign_type, indicator_type, phonographic, stem, 'intact'::@extschema:cuneiform_sign_properties@.sign_condition, NULL, 
+        (cun_agg (character_print, ordinality::integer, word_no, 0, NULL, 0, 'sign'::@extschema:cuneiform_sign_properties@.sign_type, indicator_type, phonographic, stem, 'intact'::@extschema:cuneiform_sign_properties@.sign_condition, NULL, 
             FALSE, FALSE, FALSE, NULL, NULL, capitalized, NULL, NULL, NULL ORDER BY ordinality))[1]
     FROM
         unnest(v_sign_meanings) WITH ORDINALITY

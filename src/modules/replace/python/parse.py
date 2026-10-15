@@ -43,11 +43,11 @@ def parse_replacement(code: str, id: InOut[int]):
             ordinality::integer-1, 
             value, 
             sign_spec, 
-            type
+            unknown_reading
         FROM
             UNNEST($1) WITH ORDINALITY
         WHERE
-            type = 'value' OR type = 'sign'
+            type = 'sign'
             """, 
         ['@extschema:cuneiform_parser@.corpus_parser_type[]']
     )
@@ -97,7 +97,7 @@ def parse_replacement(code: str, id: InOut[int]):
             @extschema@.replace_pattern_corpus
         WHERE
             pattern_id = {id}
-            AND (type = 'sign' OR type = 'value')
+            AND type = 'sign'
             AND sign_variant_id IS NULL
         """)
 

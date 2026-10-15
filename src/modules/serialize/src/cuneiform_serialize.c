@@ -17,6 +17,7 @@ static cun_copy_n_t copy_n;
 static cun_copy_t copy;
 static cun_compare_next_t compare_next;
 static cun_capitalize_t capitalize;
+static cun_is_unknown_reading_t is_unknown_reading;
 
 static cun_enum_type_t enum_type;
 static cun_enum_condition_t enum_condition;
@@ -42,6 +43,7 @@ void _PG_init(void)
     copy = (cun_copy_t)load_external_function("cuneiform_print_core", "cun_copy", true, NULL);
     compare_next = (cun_compare_next_t)load_external_function("cuneiform_print_core", "cun_compare_next", true, NULL);
     capitalize = (cun_capitalize_t)load_external_function("cuneiform_print_core", "cun_capitalize", true, NULL);
+    is_unknown_reading = (cun_is_unknown_reading_t)load_external_function("cuneiform_print_core", "cun_is_unknown_reading", true, NULL);
 
     enum_type = (cun_enum_type_t)load_external_function("cuneiform_print_core", "cun_enum_type", true, NULL);
     enum_condition = (cun_enum_condition_t)load_external_function("cuneiform_print_core", "cun_enum_condition", true, NULL);
@@ -329,7 +331,7 @@ Datum cuneiform_cun_agg_sfunc(PG_FUNCTION_ARGS)
     state->pn_type = PG_GETARG_OID(ARG_PN_TYPE);
     state->pn_type_null = PG_ARGISNULL(ARG_PN_TYPE);
     state->capitalize = state_old.capitalize || (PG_GETARG_BOOL(ARG_CAPITALIZED) && state_old.word_no != state->word_no);
-    state->unknown_reading = state->type == enum_type()->sign;
+    state->unknown_reading = state->type == enum_type()->sign && is_unknown_reading(value ? (char*)VARDATA_ANY(value) : NULL, value_size);
 
     s = get_cursor(size + state_old.compound_comment_len + MAX_EXTRA_LINE_LEN, state);
 

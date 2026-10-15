@@ -5,7 +5,6 @@
 #include <fmgr.h>
 
 typedef struct CunEnumType {
-    Oid value;
     Oid sign;
     Oid number;
     Oid punctuation;
@@ -157,10 +156,12 @@ typedef char *(*cun_copy_n_t)(char *s1, const char *s2, size_t n);
 typedef char *(*cun_copy_t)(char *s1, const char *s2);
 typedef int (*cun_compare_next_t)(const char *s1, const char *s2);
 typedef void (*cun_capitalize_t)(char *s);
+typedef bool (*cun_is_unknown_reading_t)(char *s, size_t n);
 extern PGDLLEXPORT char *cun_copy_n(char *s1, const char *s2, size_t n);
 extern PGDLLEXPORT char *cun_copy(char *s1, const char *s2);
 extern PGDLLEXPORT int cun_compare_next(const char *s1, const char *s2);
 extern PGDLLEXPORT void cun_capitalize(char *s);
+extern PGDLLEXPORT bool cun_is_unknown_reading(char *s, size_t n);
 
 typedef State *(*cun_init_state_t)(int line_capacity, MemoryContext memcontext);
 typedef char *(*cun_add_line_t)(int capacity, State *state, MemoryContext memcontext);

@@ -64,18 +64,17 @@ void cun_set_enums()
         ENUM_INDICATOR_TYPE.right = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 3, &isnull));
         ENUM_INDICATOR_TYPE.center = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 4, &isnull));
     }
-    SPI_execute("SELECT 'value'::sign_type, 'sign'::sign_type, 'number'::sign_type, 'punctuation'::sign_type,"
+    SPI_execute("SELECT 'sign'::sign_type, 'number'::sign_type, 'punctuation'::sign_type,"
                 "       'description'::sign_type, 'damage'::sign_type", true, 1);
     if(SPI_tuptable != NULL && SPI_processed == 1)
     {
         const HeapTuple tuple = SPI_tuptable->vals[0];
         const TupleDesc tupdesc = SPI_tuptable->tupdesc;
-        ENUM_TYPE.value = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 1, &isnull));
-        ENUM_TYPE.sign = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 2, &isnull));
-        ENUM_TYPE.number = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 3, &isnull));
-        ENUM_TYPE.punctuation = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 4, &isnull));
-        ENUM_TYPE.description = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 5, &isnull));
-        ENUM_TYPE.damage = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 6, &isnull));
+        ENUM_TYPE.sign = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 1, &isnull));
+        ENUM_TYPE.number = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 2, &isnull));
+        ENUM_TYPE.punctuation = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 3, &isnull));
+        ENUM_TYPE.description = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 4, &isnull));
+        ENUM_TYPE.damage = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 5, &isnull));
     }
     SPI_execute("SELECT 'intact'::sign_condition, 'damaged'::sign_condition, 'lost'::sign_condition,"
                 "       'inserted'::sign_condition, 'deleted'::sign_condition, 'erased'::sign_condition", true, 1);
@@ -221,6 +220,32 @@ void cun_capitalize(char* s)
     else
         *s = toupper(*s);
 }
+
+bool cun_is_unknown_reading(char* s, size_t n)
+{
+    if(!n)
+        return false;
+    if(islower((unsigned char)*s))
+        return false;
+    if(n >= strlen("’") && !cun_compare_next(s, "’"))
+        return cun_is_unknown_reading(s+strlen("’"), n-strlen("’"));
+    if(n >= strlen("ḫ") && !cun_compare_next(s, "ḫ"))
+        return false;
+    if(n >= strlen("š") && !cun_compare_next(s, "š"))
+        return false;
+    if(n >= strlen("ĝ") && !cun_compare_next(s, "ĝ"))
+        return false;
+    if(n >= strlen("ř") && !cun_compare_next(s, "ř"))
+        return false;
+    if(n >= strlen("ṣ") && !cun_compare_next(s, "ṣ"))
+        return false;
+    if(n >= strlen("ṭ") && !cun_compare_next(s, "ṭ"))
+        return false;
+    if(n == strlen("II") && !cun_compare_next(s, "II"))
+        return false;
+    return true;
+}
+
 
 
 State* cun_init_state(const int line_capacity, MemoryContext memcontext)

@@ -99,7 +99,7 @@ CREATE TYPE corpus_unencoded_type AS (
     sign_no integer,
     value text,
     sign_spec text,
-    type @extschema:cuneiform_sign_properties@.sign_type
+    unknown_reading boolean
 );
 
 
@@ -128,7 +128,7 @@ BEGIN
                             LEFT JOIN LATERAL @extschema:cuneiform_signlist@.split_glyphs(value) WITH ORDINALITY AS a(glyph, glyph_no) ON TRUE
                             LEFT JOIN LATERAL @extschema:cuneiform_signlist@.split_sign(glyph) WITH ORDINALITY AS b(component, op, component_no) ON TRUE
                             LEFT JOIN @extschema:cuneiform_signlist@.sign_map ON component = identifier
-                        WHERE type = 'sign'
+                        WHERE unknown_reading
                         GROUP BY 
                             %1$s,
                             sign_no,
@@ -174,28 +174,26 @@ BEGIN
                     %1$s,
                     sign_no,
                     value_id,
-                    sign_variant_id,
-                    type
+                    sign_variant_id
                 FROM
                     %3$I.%2$I s
                     LEFT JOIN normalized_sign_specs USING (%1$s, sign_no)
                     JOIN @extschema@.values_encoded ON normalized_sign_specs.glyphs IS NOT DISTINCT FROM values_encoded.sign_spec AND s.value = values_encoded.value
                 WHERE 
-                    s.type = 'value'
+                    NOT s.unknown_reading
                 UNION ALL
                 SELECT
                     %1$s,
                     sign_no,
                     NULL,
-                    sign_variant_id,
-                    type
+                    sign_variant_id
                 FROM
                     %3$I.%2$I s
                     LEFT JOIN normalized_signs USING (%1$s, sign_no)
                     LEFT JOIN normalized_sign_specs USING (%1$s, sign_no)
                     JOIN @extschema@.signs_encoded ON normalized_signs.glyphs = signs_encoded.sign AND normalized_sign_specs.glyphs IS NOT DISTINCT FROM signs_encoded.sign_spec
                 WHERE 
-                    s.type = 'sign'
+                    s.unknown_reading
         $$,
         v_key_str,
         v_source,

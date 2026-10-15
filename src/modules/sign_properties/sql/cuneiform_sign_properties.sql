@@ -10,7 +10,6 @@ CREATE TYPE language AS ENUM (
 );
 
 CREATE TYPE sign_type AS ENUM (
-    'value',
     'sign',
     'number',
     'punctuation',
