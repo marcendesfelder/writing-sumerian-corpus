@@ -286,7 +286,7 @@ static char* write_modified_connector_html(char* s, const Connector c)
     }
     else if(c.modifier == SEP_EXT_LIGATURE)
     {
-        if(c.modifier == SEP_INDICATOR_M)
+        if(c.connector == SEP_INDICATOR_M)
             s = copy(s, "<span class='indicator'>+</span>");
         else
             *s++ = '+';
