@@ -43,7 +43,8 @@ void cun_set_enums()
         SPI_execute(query, false, 0);
     }    
 
-    SPI_execute("SELECT 'sumerian'::language, 'akkadian'::language, 'hittite'::language, 'eblaite'::language, 'other'::language", true, 1);
+    SPI_execute("SELECT 'sumerian'::language, 'akkadian'::language, 'hittite'::language, 'eblaite'::language," 
+                "       'emesal'::language, 'hurrian'::language, 'amorite'::language, 'other'::language", true, 1);
     if(SPI_tuptable != NULL && SPI_processed == 1)
     {
         const HeapTuple tuple = SPI_tuptable->vals[0];
@@ -52,7 +53,10 @@ void cun_set_enums()
         ENUM_LANGUAGE.akkadian = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 2, &isnull));
         ENUM_LANGUAGE.hittite = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 3, &isnull));
         ENUM_LANGUAGE.eblaite = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 4, &isnull));
-        ENUM_LANGUAGE.other = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 5, &isnull));
+        ENUM_LANGUAGE.emesal = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 5, &isnull));
+        ENUM_LANGUAGE.hurrian = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 6, &isnull));
+        ENUM_LANGUAGE.amorite = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 7, &isnull));
+        ENUM_LANGUAGE.other = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 8, &isnull));
     }
     SPI_execute("SELECT 'none'::indicator_type, 'left'::indicator_type, 'right'::indicator_type, 'center'::indicator_type", true, 1);
     if(SPI_tuptable != NULL && SPI_processed == 1)
@@ -89,8 +93,8 @@ void cun_set_enums()
         ENUM_CONDITION.deleted = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 5, &isnull));
         ENUM_CONDITION.erased = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 6, &isnull));
     }
-    SPI_execute("SELECT 'person'::pn_type, 'god'::pn_type, 'place'::pn_type, 'water'::pn_type, 'field'::pn_type,"
-                "       'temple'::pn_type, 'month'::pn_type, 'object'::pn_type, 'ethnicity'::pn_type", true, 1);
+    SPI_execute("SELECT 'person'::pn_type, 'god'::pn_type, 'place'::pn_type, 'water'::pn_type, 'field'::pn_type, 'temple'::pn_type,"
+                "       'month'::pn_type, 'object'::pn_type, 'ethnicity'::pn_type, 'festival'::pn_type, 'none'::pn_type", true, 1);
     if(SPI_tuptable != NULL && SPI_processed == 1)
     {
         const HeapTuple tuple = SPI_tuptable->vals[0];
@@ -104,6 +108,8 @@ void cun_set_enums()
         ENUM_PN.month = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 7, &isnull));
         ENUM_PN.object = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 8, &isnull));
         ENUM_PN.ethnicity = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 9, &isnull));
+        ENUM_PN.festival = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 10, &isnull));
+        ENUM_PN.none = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 11, &isnull));
     }
 
 

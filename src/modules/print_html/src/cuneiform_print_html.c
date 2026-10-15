@@ -155,6 +155,12 @@ static char* open_html(char* s, int changes, const State* state, const int *extr
             s = copy(s, "<span class='hittite'>");
         else if(state->language == enum_language()->eblaite)
             s = copy(s, "<span class='eblaite'>");
+        else if(state->language == enum_language()->emesal)
+            s = copy(s, "<span class='emesal'>");
+        else if(state->language == enum_language()->hurrian)
+            s = copy(s, "<span class='hurrian'>");
+        else if(state->language == enum_language()->amorite)
+            s = copy(s, "<span class='amorite'>");
         else
             s = copy(s, "<span class='otherlanguage'>");
     }

@@ -103,8 +103,16 @@ static char* open_code(char* s, const State* s1, State* s2)
             s = copy(s, "%e ");
         else if(s2->language == enum_language()->hittite)
             s = copy(s, "%h ");
+        else if(s2->language == enum_language()->hurrian)
+            s = copy(s, "%hu ");
+        else if(s2->language == enum_language()->emesal)
+            s = copy(s, "%es ");
+        else if(s2->language == enum_language()->amorite)
+            s = copy(s, "%am ");
         else if(s2->language == enum_language()->sumerian)
             s = copy(s, "%s ");
+        else if(s2->language == enum_language()->other)
+            s = copy(s, "%o ");
     }
     if(!s2->pn_type_null && (s1 == NULL || s1->pn_type != s2->pn_type || s1->pn_type_null || s1->compound_no != s2->compound_no))
     {
@@ -126,6 +134,8 @@ static char* open_code(char* s, const State* s1, State* s2)
             s = copy(s, "%object ");
         else if(s2->pn_type == enum_pn()->ethnicity)
             s = copy(s, "%ethnicity ");
+        else if(s2->pn_type == enum_pn()->festival)
+            s = copy(s, "%festival ");
     }
 
     if(!s2->stem_null && (s1 == NULL || (s1->stem_null && s1->compound_no != s2->compound_no)))

@@ -25,6 +25,9 @@ typedef struct CunEnumLanguage {
     Oid akkadian;
     Oid hittite;
     Oid eblaite;
+    Oid emesal;
+    Oid hurrian;
+    Oid amorite;
     Oid other;
 } cunEnumLanguage;
 
@@ -55,6 +58,8 @@ typedef struct CunEnumPN {
     Oid month;
     Oid object;
     Oid ethnicity;
+    Oid festival;
+    Oid none;
 } cunEnumPN;
 
 typedef void (*set_enums_t) (
