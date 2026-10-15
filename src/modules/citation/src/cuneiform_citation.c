@@ -1,7 +1,5 @@
 #include "cuneiform_citation.h"
 
-#include <math.h>
-
 #include <fmgr.h>
 #include <executor/executor.h>
 #include <executor/spi.h>
@@ -10,8 +8,8 @@
 #include <catalog/pg_type.h>
 #include <utils/array.h>
 
-int32 dash_size = strlen("–");
-int32 dot_size = strlen("; ");
+static const int32 dash_size = strlen("–");
+static const int32 dot_size = strlen("; ");
 
 static char* cun_copy_n(char* s1, const char* s2, size_t n)
 {
@@ -79,20 +77,24 @@ static text* assamble_range(const State* state, text* string)
     if(string_size)
         size += dot_size;
 
-    if(changes > 3)
-        size += VARSIZE_ANY_EXHDR(state->surface_start) + VARSIZE_ANY_EXHDR(state->surface) + 2;
-    else if(state->print_surface)
+    if((changes > 3 || state->print_surface) && state->surface_start)
         size += VARSIZE_ANY_EXHDR(state->surface_start) + 1;
-    if(changes > 1)
-        size += VARSIZE_ANY_EXHDR(state->block_start) + VARSIZE_ANY_EXHDR(state->block) + 4;
-    else if(state->print_block)
+    if((changes > 1 || state->print_block) && state->block_start)
         size += VARSIZE_ANY_EXHDR(state->block_start) + 1;
-    size += VARSIZE_ANY_EXHDR(state->line_start);
-    if(changes > 0)
+    if(state->line_start)
+        size += VARSIZE_ANY_EXHDR(state->line_start);
+    if(changes > 1)
+        size += dash_size + 2;
+    else if(changes > 0)
+        size += dash_size;
+    if(changes > 3 && state->surface)
+        size += VARSIZE_ANY_EXHDR(state->surface) + 1;
+    if(changes > 1 && state->block)
+        size += VARSIZE_ANY_EXHDR(state->block) + 1;
+    if(changes > 0 && state->line)
         size += VARSIZE_ANY_EXHDR(state->line);
 
-     
-    string = (text*)repalloc(string, string_size + VARHDRSZ +1000);
+    string = (text*)repalloc(string, size + VARHDRSZ);
     s = VARDATA(string)+string_size;
 
     
@@ -127,7 +129,7 @@ static text* assamble_range(const State* state, text* string)
     }
     if(changes > 0 && state->line)
         s = cun_copy_n(s, VARDATA(state->line), VARSIZE_ANY_EXHDR(state->line));
-    
+
     SET_VARSIZE(string, s-VARDATA(string)+VARHDRSZ);
 
     return string;
