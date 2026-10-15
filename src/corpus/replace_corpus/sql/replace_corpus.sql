@@ -148,6 +148,11 @@ BEGIN
     END LOOP;
 
     DROP VIEW pg_temp.corpus;
+    DROP VIEW pg_temp.lines;
+    DROP VIEW pg_temp.blocks;
+    DROP VIEW pg_temp.surfaces;
+    DROP VIEW pg_temp.sections;
+
     DROP TABLE pg_temp.corpus_replace;
     DROP TABLE pg_temp.words;
     DROP TABLE pg_temp.compounds;
