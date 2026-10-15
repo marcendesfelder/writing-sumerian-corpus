@@ -160,7 +160,7 @@ CREATE OR REPLACE FUNCTION print_number_html(v_number text)
 BEGIN ATOMIC
     SELECT 
         string_agg(
-            regexp_replace(part, '[!?*]+', '<span class=''critics''>\1</span>', 'g') 
+            regexp_replace(part, '([!?*]+)', '<span class=''critics''>\1</span>', 'g') 
                 || COALESCE('<span class=''signspec''>' || @extschema@.print_sign_html(spec) || '</span>', ''), 
             '' 
             ORDER BY ordinality
