@@ -346,22 +346,22 @@ static char* write_value_replacing_conditions_html(char* s, const char* v, size_
 {
     while(n-- != 0)
     {
-        if(*s == ']')
+        if(*v == ']')
             s = copy(s, "</span><span class='close-lost'></span>");
-        else if(n+1 >= strlen("⸣") && !compare_next(s, "⸣"))
+        else if(n+1 >= strlen("⸣") && !compare_next(v, "⸣"))
             s = copy(s, "</span><span class='close-damaged'></span>");
-        else if(n+1 >= strlen("›") && !compare_next(s, "›"))
+        else if(n+1 >= strlen("›") && !compare_next(v, "›"))
             s = copy(s, "</span><span class='close-inserted'></span>");
-        else if(n+1 >= strlen("»") && !compare_next(s, "»"))
+        else if(n+1 >= strlen("»") && !compare_next(v, "»"))
             s = copy(s, "</span><span class='close-deleted'></span>");
-        else if(*s == '[') 
+        else if(*v == '[') 
             s = copy(s, "<span class='open-lost'></span><span class='lost'>");
-        else if(n+1 >= strlen("⸢") && !compare_next(s, "⸢"))
-            s = copy(s, "<span class='close-damaged'><span class='damaged'>");
-        else if(n+1 >= strlen("‹") && !compare_next(s, "‹"))
-            s = copy(s, "<span class='close-inserted'><span class='inserted'>");
-        else if(n+1 >= strlen("«") && !compare_next(s, "«"))
-            s = copy(s, "<span class='close-deleted'><span class='deleted'>");
+        else if(n+1 >= strlen("⸢") && !compare_next(v, "⸢"))
+            s = copy(s, "<span class='close-damaged'></span><span class='damaged'>");
+        else if(n+1 >= strlen("‹") && !compare_next(v, "‹"))
+            s = copy(s, "<span class='close-inserted'></span><span class='inserted'>");
+        else if(n+1 >= strlen("«") && !compare_next(v, "«"))
+            s = copy(s, "<span class='close-deleted'></span><span class='deleted'>");
         else
             *s++ = *v;
         ++v;
