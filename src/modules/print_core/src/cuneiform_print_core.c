@@ -2,6 +2,8 @@
 
 #include <fmgr.h>
 #include <executor/spi.h>
+#include <utils/builtins.h>
+#include <utils/guc.h>
 
 PG_MODULE_MAGIC;
 
@@ -18,11 +20,13 @@ static bool enums_set = false;
 void cun_set_enums()
 {
     bool isnull;
+    int save_nestlevel;
     
     if(enums_set)
         return;
 
     SPI_connect();
+    save_nestlevel = NewGUCNestLevel();
 
     SPI_execute("SELECT extnamespace::regnamespace::text FROM pg_extension WHERE extname = 'cuneiform_sign_properties'", true, 1);
     if(SPI_tuptable != NULL && SPI_processed == 1)
@@ -30,17 +34,9 @@ void cun_set_enums()
         const HeapTuple tuple = SPI_tuptable->vals[0];
         const TupleDesc tupdesc = SPI_tuptable->tupdesc;
 
-        text *schema;
-        char *query;
-        char *s;
-
-        schema = DatumGetTextPP(SPI_getbinval(tuple, tupdesc, 1, &isnull));
-        query = palloc(25 + VARSIZE_ANY_EXHDR(schema));
-        s = query;
-        s = cun_copy(s, "SET search_path TO ");
-        s = cun_copy_n(s, VARDATA_ANY(schema), VARSIZE_ANY_EXHDR(schema));
-        *s = '\0';
-        SPI_execute(query, false, 0);
+        const char *schema = text_to_cstring(DatumGetTextPP(SPI_getbinval(tuple, tupdesc, 1, &isnull)));
+        (void) set_config_option("search_path", schema,
+                                 PGC_USERSET, PGC_S_SESSION, GUC_ACTION_SAVE, true, 0, false);
     }    
 
     SPI_execute("SELECT 'sumerian'::language, 'akkadian'::language, 'hittite'::language, 'eblaite'::language," 
@@ -119,17 +115,9 @@ void cun_set_enums()
         const HeapTuple tuple = SPI_tuptable->vals[0];
         const TupleDesc tupdesc = SPI_tuptable->tupdesc;
 
-        text *schema;
-        char *query;
-        char *s;
-
-        schema = DatumGetTextPP(SPI_getbinval(tuple, tupdesc, 1, &isnull));
-        query = palloc(25 + VARSIZE_ANY_EXHDR(schema));
-        s = query;
-        s = cun_copy(s, "SET search_path TO ");
-        s = cun_copy_n(s, VARDATA_ANY(schema), VARSIZE_ANY_EXHDR(schema));
-        *s = '\0';
-        SPI_execute(query, false, 0);
+        const char *schema = text_to_cstring(DatumGetTextPP(SPI_getbinval(tuple, tupdesc, 1, &isnull)));
+        (void) set_config_option("search_path", schema,
+                                 PGC_USERSET, PGC_S_SESSION, GUC_ACTION_SAVE, true, 0, false);
     }
 
     SPI_execute("SELECT 'default'::sign_variant_type, 'nondefault'::sign_variant_type, 'reduced'::sign_variant_type,"
@@ -145,7 +133,7 @@ void cun_set_enums()
         ENUM_VARIANT_TYPE.nonstandard = DatumGetObjectId(SPI_getbinval(tuple, tupdesc, 5, &isnull));
     }
 
-    SPI_execute("SET search_path TO public", false, 0);
+    AtEOXact_GUC(true, save_nestlevel);
     
     SPI_finish();
 
