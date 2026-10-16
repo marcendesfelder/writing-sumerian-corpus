@@ -194,7 +194,7 @@ int cun_compare_next(const char* s1, const char* s2)
 
 void cun_capitalize(char* s)
 {
-    if(*s & (1 << 8))
+    if(IS_HIGHBIT_SET(*s))
     {
         if(!cun_compare_next(s, "’"))
             cun_capitalize(s+strlen("’"));
@@ -212,7 +212,7 @@ void cun_capitalize(char* s)
             cun_copy(s,"Ṭ");
     }
     else
-        *s = toupper(*s);
+        *s = toupper((unsigned char)*s);
 }
 
 bool cun_is_unknown_reading(char* s, size_t n)
