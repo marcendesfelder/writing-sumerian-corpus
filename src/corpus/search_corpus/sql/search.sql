@@ -417,8 +417,8 @@ CREATE OR REPLACE FUNCTION search_signs_clean (v_search_term text)
   AS $BODY$
   SELECT
     transliteration_id,
-    (@extschema:cuneiform_serialize@.cun_agg(value, sign, variant_type, sign_no, word_no, compound_no, NULL, 0, type, indicator_type, phonographic, stem, 'intact', LANGUAGE, 
-            FALSE, FALSE, FALSE, NULL, NULL, FALSE, NULL, NULL, NULL, FALSE ORDER BY sign_no))[1],
+    (@extschema:cuneiform_serialize@.cun_agg(value, sign_no, word_no, compound_no, NULL, 0, type, indicator_type, phonographic, stem, 'intact', LANGUAGE, 
+            FALSE, FALSE, FALSE, NULL, NULL, FALSE, NULL, NULL, NULL ORDER BY sign_no))[1],
     signs
   FROM (
     SELECT
@@ -472,8 +472,8 @@ found_words AS (
 )
 SELECT
   corpus_code_clean.transliteration_id,
-  (@extschema:cuneiform_serialize@.cun_agg (value, sign, variant_type, sign_no, corpus_code_clean.word_no, compound_no, NULL, 0, type, indicator_type, phonographic, stem, 'intact', LANGUAGE, 
-            FALSE, FALSE, FALSE, NULL, NULL, FALSE, NULL, NULL, NULL, FALSE ORDER BY sign_no))[1]
+  (@extschema:cuneiform_serialize@.cun_agg (value, sign_no, corpus_code_clean.word_no, compound_no, NULL, 0, type, indicator_type, phonographic, stem, 'intact', LANGUAGE, 
+            FALSE, FALSE, FALSE, NULL, NULL, FALSE, NULL, NULL, NULL ORDER BY sign_no))[1]
 FROM
   found_words
   JOIN @extschema:cuneiform_serialize_corpus@.corpus_code_clean ON found_words.transliteration_id = corpus_code_clean.transliteration_id
@@ -509,8 +509,8 @@ CREATE OR REPLACE FUNCTION search_lines (v_search_term text)
     JOIN @extschema:cuneiform_corpus@.corpus USING (transliteration_id, sign_no))
 SELECT
   transliteration_id,
-  array_to_string(@extschema:cuneiform_serialize@.cun_agg(value, sign, variant_type, sign_no, word_no, compound_no, section_no, line_no, type, indicator_type, phonographic, stem, condition, LANGUAGE, 
-      inverted, newline, ligature, crits, comment, capitalized, pn_type, section_name, compound_comment, FALSE ORDER BY sign_no), '\n'),
+  array_to_string(@extschema:cuneiform_serialize@.cun_agg(value, sign_no, word_no, compound_no, section_no, line_no, type, indicator_type, phonographic, stem, condition, LANGUAGE, 
+      inverted, newline, ligature, crits, comment, capitalized, pn_type, section_name, compound_comment ORDER BY sign_no), '\n'),
   line_no
 FROM
   found_lines
