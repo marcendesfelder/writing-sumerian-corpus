@@ -319,7 +319,7 @@ Datum* cun_copy_print_result(const State *state, int extra_size)
     Datum* lines = (Datum*) palloc0(state->line_count * sizeof(Datum));
     int texts_size = extra_size;
     for(int i = 0; i < state->line_count; ++i)
-        texts_size += state->line_lens[i] + VARHDRSZ;
+        texts_size += INTALIGN(state->line_lens[i] + VARHDRSZ);
     p = palloc0(texts_size);
     for(int i = 0; i < state->line_count; ++i)
     {
@@ -327,7 +327,7 @@ Datum* cun_copy_print_result(const State *state, int extra_size)
         SET_VARSIZE(t, state->line_lens[i] + VARHDRSZ);
         memcpy(VARDATA(t), state->lines[i], state->line_lens[i]);
         lines[i] = PointerGetDatum(t);
-        p += state->line_lens[i] + VARHDRSZ;
+        p += INTALIGN(state->line_lens[i] + VARHDRSZ);
     }
     return lines;
 }
