@@ -131,7 +131,7 @@ CREATE OR REPLACE FUNCTION log_trace_entry_backwards (
 BEGIN ATOMIC
 SELECT
     CASE
-        WHEN v_action = 'insert' AND v_entry_no >= v_id THEN v_entry_no-1
+        WHEN v_action = 'insert' AND v_entry_no > v_id THEN v_entry_no-1
         WHEN v_action = 'insert' AND v_entry_no = v_id THEN NULL
         WHEN v_action = 'delete' AND v_entry_no > v_id THEN v_entry_no+1
         ELSE v_entry_no
