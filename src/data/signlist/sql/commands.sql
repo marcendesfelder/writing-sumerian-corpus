@@ -329,7 +329,7 @@ $BODY$;
 
 CREATE OR REPLACE PROCEDURE allomorph_to_allograph (
     v_allomorph_id integer,
-    v_allgraph_id INOUT integer DEFAULT NULL
+    v_allograph_id INOUT integer DEFAULT NULL
   )
   LANGUAGE PLPGSQL
 AS $BODY$
@@ -340,7 +340,6 @@ DECLARE
   v_grapheme_id integer;
   v_allograph_specific boolean;
   v_glyph_id integer;
-  v_allograph_id integer;
   v_sign_variant_id integer;
   v_grapheme_id_new integer;
   v_allomorph_id_new integer;
@@ -393,6 +392,8 @@ BEGIN
   INSERT INTO @extschema@.allographs VALUES (default, v_grapheme_id_new, v_glyph_id, v_variant_type, v_specific) RETURNING allograph_id INTO v_allograph_id_new;
   DELETE FROM @extschema@.sign_variants WHERE allomorph_id = v_allomorph_id_new AND allograph_ids = ARRAY[v_allograph_id_new];
   INSERT INTO @extschema@.sign_variants OVERRIDING SYSTEM VALUE VALUES (v_sign_variant_id, v_sign_id, v_allomorph_id_new, ARRAY[v_allograph_id_new], v_variant_type, v_specific);
+
+  v_allograph_id := v_allograph_id_new;
 
   --SET CONSTRAINTS ALL IMMEDIATE;
 
