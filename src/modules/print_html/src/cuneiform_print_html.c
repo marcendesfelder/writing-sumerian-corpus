@@ -64,8 +64,9 @@ void _PG_init(void)
 };
 
 
-#define EXP_LINE_LEN          1000
-#define MAX_EXTRA_LINE_LEN     300
+#define EXP_LINE_LEN          1024
+#define MAX_EXTRA_LINE_LEN    1024     // upper bound for the markup written around one sign, without extras
+#define MAX_EXTRA_SPAN_LEN      64     // upper bound for opening and closing the span of one extra
 
 #define ARG_VALUE                1
 #define ARG_SIGN_NO              2
@@ -131,11 +132,11 @@ static void load_extra(const AnyArrayType *extra, htmlState *state)
     }
 }
 
-static int get_extra_changes(const htmlState *state, const bool newline)
+static int get_extra_changes(const htmlState *state)
 {
     int changes = 0;
     for(int i = 0; i < state->len_extra; ++i)
-        if(newline || state->extra_null[i] != state->extra_null_old[i] || (!state->extra_null[i] && state->extra[i] != state->extra_old[i]))
+        if(state->extra_null[i] != state->extra_null_old[i] || (!state->extra_null[i] && state->extra[i] != state->extra_old[i]))
             changes += 1 << i;
     return changes;
 }
@@ -302,7 +303,7 @@ static char* write_modified_connector_html(char* s, const Connector c)
             s = copy(s, "—:");
         else if(c.connector == SEP_COMPOUND)
             s = copy(s, " : ");
-        else if(c.modifier == SEP_INDICATOR_M)
+        else if(c.connector == SEP_INDICATOR_M)
             s = copy(s, "<span class='indicator'>:</span>");
         else
             *s++ = ':';
@@ -314,29 +315,46 @@ static char* write_modified_connector_html(char* s, const Connector c)
 }
 
 
-static size_t calculate_value_size_replacing_conditions_html(const char* s, size_t n)
+typedef struct ConditionMarker
+{
+    const char* marker;
+    const char* html;
+} ConditionMarker;
+
+static const ConditionMarker condition_markers[] = {
+    {"]", "</span><span class='close-lost'></span>"},
+    {"⸣", "</span><span class='close-damaged'></span>"},
+    {"›", "</span><span class='close-inserted'></span>"},
+    {"»", "</span><span class='close-deleted'></span>"},
+    {"[", "<span class='open-lost'></span><span class='lost'>"},
+    {"⸢", "<span class='open-damaged'></span><span class='damaged'>"},
+    {"‹", "<span class='open-inserted'></span><span class='inserted'>"},
+    {"«", "<span class='open-deleted'></span><span class='deleted'>"}
+};
+
+
+static const ConditionMarker* match_condition_marker(const char* v, size_t n)
+{
+    for(size_t i = 0; i < lengthof(condition_markers); ++i)
+    {
+        const size_t len = strlen(condition_markers[i].marker);
+        if(n >= len && !memcmp(v, condition_markers[i].marker, len))
+            return &condition_markers[i];
+    }
+    return NULL;
+}
+
+
+static size_t calculate_value_size_replacing_conditions_html(const char* v, size_t n)
 {
     size_t size = 0;
-    while(n-- != 0)
+    while(n != 0)
     {
-        if(*s == ']')
-            size += strlen("</span><span class='close-lost'></span>");
-        else if(n+1 >= strlen("⸣") && !compare_next(s, "⸣"))
-            size += strlen("</span><span class='close-damaged'></span>");
-        else if(n+1 >= strlen("›") && !compare_next(s, "›"))
-            size += strlen("</span><span class='close-inserted'></span>");
-        else if(n+1 >= strlen("»") && !compare_next(s, "»"))
-            size += strlen("</span><span class='close-deleted'></span>");
-        else if(*s == '[') 
-            size += strlen("<span class='open-lost'></span><span class='lost'>");
-        else if(n+1 >= strlen("⸢") && !compare_next(s, "⸢"))
-            size += strlen("<span class='close-damaged'><span class='damaged'>");
-        else if(n+1 >= strlen("‹") && !compare_next(s, "‹"))
-            size += strlen("<span class='close-inserted'><span class='inserted'>");
-        else if(n+1 >= strlen("«") && !compare_next(s, "«"))
-            size += strlen("<span class='close-deleted'><span class='deleted'>");
-        else
-            ++size;
+        const ConditionMarker* m = match_condition_marker(v, n);
+        const size_t len = m ? strlen(m->marker) : 1;
+        size += m ? strlen(m->html) : 1;
+        v += len;
+        n -= len;
     }
     return size;
 }
@@ -344,27 +362,16 @@ static size_t calculate_value_size_replacing_conditions_html(const char* s, size
 
 static char* write_value_replacing_conditions_html(char* s, const char* v, size_t n)
 {
-    while(n-- != 0)
+    while(n != 0)
     {
-        if(*v == ']')
-            s = copy(s, "</span><span class='close-lost'></span>");
-        else if(n+1 >= strlen("⸣") && !compare_next(v, "⸣"))
-            s = copy(s, "</span><span class='close-damaged'></span>");
-        else if(n+1 >= strlen("›") && !compare_next(v, "›"))
-            s = copy(s, "</span><span class='close-inserted'></span>");
-        else if(n+1 >= strlen("»") && !compare_next(v, "»"))
-            s = copy(s, "</span><span class='close-deleted'></span>");
-        else if(*v == '[') 
-            s = copy(s, "<span class='open-lost'></span><span class='lost'>");
-        else if(n+1 >= strlen("⸢") && !compare_next(v, "⸢"))
-            s = copy(s, "<span class='close-damaged'></span><span class='damaged'>");
-        else if(n+1 >= strlen("‹") && !compare_next(v, "‹"))
-            s = copy(s, "<span class='close-inserted'></span><span class='inserted'>");
-        else if(n+1 >= strlen("«") && !compare_next(v, "«"))
-            s = copy(s, "<span class='close-deleted'></span><span class='deleted'>");
+        const ConditionMarker* m = match_condition_marker(v, n);
+        const size_t len = m ? strlen(m->marker) : 1;
+        if(m)
+            s = copy(s, m->html);
         else
             *s++ = *v;
-        ++v;
+        v += len;
+        n -= len;
     }
     return s;
 }
@@ -381,6 +388,7 @@ Datum cuneiform_cun_agg_html_sfunc(PG_FUNCTION_ARGS)
     bool no_condition;
     Oid inner_condition;
     int changes = 0;
+    int32 markup_size;
 
     const bool first_call = PG_ARGISNULL(0);
 
@@ -444,7 +452,8 @@ Datum cuneiform_cun_agg_html_sfunc(PG_FUNCTION_ARGS)
 
     load_extra(extra, htmlstate);
 
-    s = get_cursor(size + state_old.compound_comment_len + MAX_EXTRA_LINE_LEN, state);
+    markup_size = MAX_EXTRA_LINE_LEN + htmlstate->len_extra * MAX_EXTRA_SPAN_LEN;
+    s = get_cursor(size + state_old.compound_comment_len + markup_size, state);
 
     inner_condition = opened_condition_start(value ? (char*)VARDATA_ANY(value) : NULL, value_size, &no_condition);
     if(!no_condition)
@@ -452,7 +461,10 @@ Datum cuneiform_cun_agg_html_sfunc(PG_FUNCTION_ARGS)
 
     if(!first_call)
     { 
-        changes = get_changes(&state_old, state) + 2*LANGUAGE*get_extra_changes(htmlstate, state_old.line_no != state->line_no);
+        if(state_old.line_no != state->line_no)    // Close all spans on the old line and reopen them on the new one
+            changes = INT_MAX;
+        else
+            changes = get_changes(&state_old, state) + 2*LANGUAGE*get_extra_changes(htmlstate);
 
         if(state_old.compound_no != state->compound_no && state_old.compound_comment_len)  // Word comments
         {
@@ -470,7 +482,7 @@ Datum cuneiform_cun_agg_html_sfunc(PG_FUNCTION_ARGS)
         if (state_old.line_no != state->line_no)    // Newline
         {
             state->line_lens[state->line_count-1] = s - state->lines[state->line_count-1];
-            s = add_line(size + EXP_LINE_LEN, state, aggcontext);
+            s = add_line(size + markup_size + EXP_LINE_LEN, state, aggcontext);
         }
     }
     else
@@ -525,6 +537,7 @@ Datum cuneiform_cun_agg_html_sfunc(PG_FUNCTION_ARGS)
         state->condition = opened_condition_end(value ? (char*)VARDATA_ANY(value) : NULL, value_size);
 
     state->line_lens[state->line_count-1] = s - state->lines[state->line_count-1];
+    Assert(state->line_lens[state->line_count-1] <= state->string_capacity);
 
     PG_RETURN_POINTER(htmlstate);
 }
@@ -545,7 +558,7 @@ Datum cuneiform_cun_agg_html_finalfunc(PG_FUNCTION_ARGS)
     htmlstate = (htmlState*) PG_GETARG_POINTER(0);
     state = htmlstate->state;
     
-    lines = copy_print_result(state, state->compound_comment_len + MAX_EXTRA_LINE_LEN);
+    lines = copy_print_result(state, state->compound_comment_len + MAX_EXTRA_LINE_LEN + htmlstate->len_extra * MAX_EXTRA_SPAN_LEN);
 
     string = DatumGetTextPP(lines[state->line_count-1]);
     s = VARDATA(string) + state->line_lens[state->line_count-1];
