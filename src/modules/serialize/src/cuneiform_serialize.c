@@ -61,8 +61,8 @@ void _PG_init(void)
 };
 
 
-#define EXP_LINE_LEN           100
-#define MAX_EXTRA_LINE_LEN      50
+#define EXP_LINE_LEN           256
+#define MAX_EXTRA_LINE_LEN     128     // upper bound for the code written around one sign
 
 #define ARG_VALUE                1
 #define ARG_SIGN_NO              2
