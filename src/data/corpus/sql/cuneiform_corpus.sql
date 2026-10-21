@@ -132,6 +132,7 @@ AS $BODY$
     CREATE INDEX texts_genre_id_ix ON @extschema@.texts(genre_id);
     CREATE INDEX texts_object_id_ix ON @extschema@.texts(object_id);
     CREATE INDEX texts_composition_id_ix ON @extschema@.texts(composition_id);
+    CREATE INDEX transliterations_text_id_ix ON @extschema@.transliterations(text_id);
     CREATE INDEX compositions_parent_composition_id_ix ON @extschema@.compositions(parent_composition_id);
     CREATE INDEX sections_composition_id_ix ON @extschema@.sections(composition_id);
 $BODY$;
@@ -144,6 +145,7 @@ AS $BODY$
     DROP INDEX @extschema@.texts_genre_id_ix;
     DROP INDEX @extschema@.texts_object_id_ix;
     DROP INDEX @extschema@.texts_composition_id_ix;
+    DROP INDEX @extschema@.transliterations_text_id_ix;
     DROP INDEX @extschema@.compositions_parent_composition_id_ix;
     DROP INDEX @extschema@.sections_composition_id_ix;
 $BODY$;
