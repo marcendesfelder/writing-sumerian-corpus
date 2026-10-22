@@ -25,6 +25,6 @@ include $(PGXS)
 
 all: build/$(EXTENSION)--$(version).sql
 
-build/$(EXTENSION)--$(version).sql: sql/transliterations.sql sql/signs_count.sql sql/signs_present.sql
+build/$(EXTENSION)--$(version).sql: sql/tables.sql sql/maintenance.sql sql/triggers.sql
 	@mkdir -p build
-	@cat sql/transliterations.sql sql/signs_count.sql sql/signs_present.sql > build/$(EXTENSION)--$(version).sql
+	@cat sql/tables.sql sql/maintenance.sql sql/triggers.sql > build/$(EXTENSION)--$(version).sql
