@@ -103,6 +103,7 @@ WHERE
     value NOT LIKE '%x';
 
 CREATE INDEX value_index ON value_variants (value);
+CREATE INDEX sign_variants_sign_id_ix ON sign_variants (sign_id);
 
 SELECT pg_catalog.pg_extension_config_dump('@extschema@.signs', '');
 SELECT pg_catalog.pg_extension_config_dump('@extschema@.allomorphs', '');
