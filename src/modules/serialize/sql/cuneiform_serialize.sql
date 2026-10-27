@@ -145,7 +145,7 @@ END;
 CREATE OR REPLACE FUNCTION serialize_sign_meanings (v_sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[])
   RETURNS text
   STABLE
-  COST 1000
+  COST 20000
   LANGUAGE SQL
 BEGIN ATOMIC
     SELECT
