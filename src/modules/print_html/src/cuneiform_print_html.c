@@ -416,7 +416,7 @@ Datum cuneiform_cun_agg_html_sfunc(PG_FUNCTION_ARGS)
     if (!AggCheckCallContext(fcinfo, &aggcontext))
     {
         /* cannot be called directly because of internal-type argument */
-        elog(ERROR, "array_agg_transfn called in non-aggregate context");
+        elog(ERROR, "cuneiform_cun_agg_html_sfunc called in non-aggregate context");
     }
 
     set_enums();
@@ -551,9 +551,6 @@ Datum cuneiform_cun_agg_html_finalfunc(PG_FUNCTION_ARGS)
     char* s;
 
     Assert(AggCheckCallContext(fcinfo, NULL));
-
-    if(PG_ARGISNULL(0))
-        PG_RETURN_NULL();
 
     htmlstate = (htmlState*) PG_GETARG_POINTER(0);
     state = htmlstate->state;

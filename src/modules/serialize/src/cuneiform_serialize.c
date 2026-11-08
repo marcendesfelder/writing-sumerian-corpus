@@ -309,7 +309,7 @@ Datum cuneiform_cun_agg_sfunc(PG_FUNCTION_ARGS)
     if (!AggCheckCallContext(fcinfo, &aggcontext))
     {
         /* cannot be called directly because of internal-type argument */
-        elog(ERROR, "array_agg_transfn called in non-aggregate context");
+        elog(ERROR, "cuneiform_cun_agg_sfunc called in non-aggregate context");
     }
 
     set_enums();
@@ -327,6 +327,8 @@ Datum cuneiform_cun_agg_sfunc(PG_FUNCTION_ARGS)
     state->line_no = PG_GETARG_INT32(ARG_LINE_NO);
     state->section_no = PG_GETARG_INT32(ARG_SECTION_NO);
     state->section_null = PG_ARGISNULL(ARG_SECTION_NO);
+    if(!section && !state->section_null)
+        elog(ERROR, "section name is NULL for section no %d", state->section_no);
     state->type = PG_GETARG_OID(ARG_TYPE);
     state->phonographic = PG_GETARG_BOOL(ARG_PHONOGRAPHIC);
     state->phonographic_null = PG_ARGISNULL(ARG_PHONOGRAPHIC);
@@ -410,9 +412,6 @@ Datum cuneiform_cun_agg_finalfunc(PG_FUNCTION_ARGS)
     char* s;
 
     Assert(AggCheckCallContext(fcinfo, NULL));
-
-    if(PG_ARGISNULL(0))
-        PG_RETURN_NULL();
 
     state = (State*) PG_GETARG_POINTER(0);
     
