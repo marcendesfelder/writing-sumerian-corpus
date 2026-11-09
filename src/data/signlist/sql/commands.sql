@@ -206,62 +206,6 @@ END;
 $BODY$;
 
 
-CREATE OR REPLACE PROCEDURE delete_value (
-    v_value_id integer
-  )
-  LANGUAGE PLPGSQL
-AS $BODY$
-BEGIN
-  DELETE FROM @extschema@.value_variants WHERE value_id = v_value_id;
-  DELETE FROM @extschema@.values WHERE value_id = v_value_id;
-END;
-$BODY$;
-
-
-CREATE OR REPLACE PROCEDURE delete_allomorph (
-    v_allomorph_id integer
-  )
-  LANGUAGE PLPGSQL
-AS $BODY$
-BEGIN
-  --DELETE FROM @extschema@.sign_variants WHERE sign_variants.allomorph_id = v_allomorph_id;
-  DELETE FROM @extschema@.allomorph_components WHERE allomorph_components.allomorph_id = v_allomorph_id;
-  DELETE FROM @extschema@.allomorphs WHERE allomorphs.allomorph_id = v_allomorph_id;
-END;
-$BODY$;
-
-
-CREATE OR REPLACE PROCEDURE delete_grapheme (
-    v_grapheme_id integer
-  )
-  LANGUAGE PLPGSQL
-AS $BODY$
-BEGIN
-  DELETE FROM @extschema@.allographs WHERE grapheme_id = v_grapheme_id;
-  DELETE FROM @extschema@.graphemes WHERE grapheme_id = v_grapheme_id;
-END;
-$BODY$;
-
-
-CREATE OR REPLACE PROCEDURE delete_sign (
-  v_sign_id integer
-  )
-  LANGUAGE PLPGSQL
-AS $BODY$
-DECLARE
-  v_id integer;
-BEGIN
-  FOR v_id IN SELECT value_id FROM @extschema@.values WHERE sign_id = v_sign_id LOOP
-      CALL @extschema@.delete_value(v_id);
-  END LOOP;
-  FOR v_id IN SELECT allomorph_id FROM @extschema@.allomorphs WHERE sign_id = v_sign_id LOOP
-      CALL @extschema@.delete_allomorph(v_id);
-  END LOOP;
-  DELETE FROM @extschema@.signs WHERE sign_id = v_sign_id;
-END;
-$BODY$;
-
-
 CREATE OR REPLACE PROCEDURE merge_values (
     v_value_id_1 integer, 
     v_value_id_2 integer
@@ -304,7 +248,7 @@ BEGIN
       WHERE 
           a.value ~ 'x' AND a.sign_id = v_sign_id_2 AND b.sign_id = v_sign_id_1
   LOOP
-      CALL @extschema@.delete_value(v_value_id);
+      DELETE FROM @extschema@.values WHERE value_id = v_value_id;
   END LOOP;
   FOR v_value_id IN 
       WITH value_list AS (
@@ -317,7 +261,7 @@ BEGIN
       WHERE 
           a.value ~ 'x' AND a.sign_id = v_sign_id_1 AND b.sign_id = v_sign_id_2
   LOOP
-      CALL @extschema@.delete_value(v_value_id);
+      DELETE FROM @extschema@.values WHERE value_id = v_value_id;
   END LOOP;
   UPDATE @extschema@.values SET sign_id = v_sign_id_1 WHERE sign_id = v_sign_id_2;
   UPDATE @extschema@.allomorphs SET variant_type = 'nondefault' WHERE sign_id = v_sign_id_2 AND variant_type = 'default';
@@ -385,9 +329,9 @@ BEGIN
 
   SET CONSTRAINTS ALL DEFERRED;
 
-  CALL @extschema@.delete_allomorph(v_allomorph_id);
+  DELETE FROM @extschema@.allomorphs WHERE allomorph_id = v_allomorph_id;
   IF v_specific THEN
-    CALL @extschema@.delete_grapheme(v_grapheme_id);
+    DELETE FROM @extschema@.graphemes WHERE grapheme_id = v_grapheme_id;
   END IF;
   INSERT INTO @extschema@.allographs VALUES (default, v_grapheme_id_new, v_glyph_id, v_variant_type, v_specific) RETURNING allograph_id INTO v_allograph_id_new;
   DELETE FROM @extschema@.sign_variants WHERE allomorph_id = v_allomorph_id_new AND allograph_ids = ARRAY[v_allograph_id_new];
@@ -421,7 +365,7 @@ BEGIN
             value_id = v_value_id AND 
             value !~ 'x' AND
             sign_variants_composition.variant_type = 'default';
-    CALL @extschema@.delete_value(v_value_id);
+    DELETE FROM @extschema@.values WHERE value_id = v_value_id;
 END;
 $BODY$;
 
