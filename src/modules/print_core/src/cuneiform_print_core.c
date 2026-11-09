@@ -221,6 +221,8 @@ bool cun_is_unknown_reading(char* s, size_t n)
         return false;
     if(islower((unsigned char)*s))
         return false;
+    if(*s == '\'')
+        return cun_is_unknown_reading(s+1, n-1);
     if(n >= strlen("’") && !cun_compare_next(s, "’"))
         return cun_is_unknown_reading(s+strlen("’"), n-strlen("’"));
     if(n >= strlen("ḫ") && !cun_compare_next(s, "ḫ"))
