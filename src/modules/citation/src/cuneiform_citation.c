@@ -151,7 +151,7 @@ Datum cuneiform_citation_agg_sfunc(PG_FUNCTION_ARGS)
     if (!AggCheckCallContext(fcinfo, &aggcontext))
     {
         /* cannot be called directly because of internal-type argument */
-        elog(ERROR, "array_agg_transfn called in non-aggregate context");
+        elog(ERROR, "cuneiform_citation_agg_sfunc called in non-aggregate context");
     }
 
     if(PG_ARGISNULL(0)) 
@@ -217,15 +217,10 @@ Datum cuneiform_citation_agg_sfunc(PG_FUNCTION_ARGS)
 
 Datum cuneiform_citation_agg_finalfunc(PG_FUNCTION_ARGS)
 {
-    MemoryContext aggcontext;
     text* string;
     const State* state;
 
-    if (!AggCheckCallContext(fcinfo, &aggcontext))
-    {
-        /* cannot be called directly because of internal-type argument */
-        elog(ERROR, "array_agg_transfn called in non-aggregate context");
-    }
+    Assert(AggCheckCallContext(fcinfo, NULL));
 
     state = PG_ARGISNULL(0) ? NULL : (State*) PG_GETARG_POINTER(0);
     if(state == NULL)
@@ -233,7 +228,7 @@ Datum cuneiform_citation_agg_finalfunc(PG_FUNCTION_ARGS)
 
     // the finalfunc may not alter state, therefore we need to copy everything
 
-    string = copy_text(state->string, aggcontext);
+    string = copy_text(state->string, CurrentMemoryContext);
     string = assamble_range(state, string);
 
     PG_RETURN_TEXT_P(string);
