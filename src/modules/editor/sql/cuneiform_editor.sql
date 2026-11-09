@@ -6,80 +6,11 @@ CREATE OR REPLACE FUNCTION levenshtein (
     t anyarray,
     OUT v_cost integer,
     OUT v_ops wagner_fischer_op[])
-    LANGUAGE PLPGSQL
-
-    COST 100
-    STABLE 
-AS $BODY$
-DECLARE
-
-    d integer[][] := array_fill(0, ARRAY[cardinality(s)+1, cardinality(t)+1]);
-    o @extschema@.levenshtein_op[][] := array_fill('NONE'::@extschema@.levenshtein_op, ARRAY[cardinality(s)+1, cardinality(t)+1]);
-    op @extschema@.levenshtein_op;
-
-    k integer := cardinality(s)+1;
-    l integer := cardinality(t)+1;
-
-BEGIN
-    FOR i IN 1..cardinality(s)+1 LOOP
-        d[i][1] = i-1;
-    END LOOP;
-    FOR i IN 1..cardinality(t)+1 LOOP
-        d[1][i] = i-1;
-    END LOOP;
-
-    FOR j IN 2..cardinality(t)+1 LOOP
-        FOR i IN 2..cardinality(s)+1 LOOP
-            op = 'NONE';
-            v_cost = d[i-1][j-1];
-            IF s[i-1] != t[j-1] THEN
-                v_cost = v_cost+1;
-                op = 'UPDATE';
-            END IF;
-
-            IF v_cost > d[i-1][j] + 1 THEN
-                v_cost = d[i-1][j] + 1;
-                op = 'DELETE';
-            ELSIF v_cost > d[i][j-1] + 1 THEN
-                v_cost = d[i][j-1] + 1;
-                op = 'INSERT';
-            END IF;
-
-            d[i][j] = v_cost;
-            o[i][j] = op;
-        END LOOP;
-    END LOOP;
-
-    v_ops = ARRAY[]::@extschema@.wagner_fischer_op[];
-
-    WHILE k != 1 AND l != 1 LOOP
-        IF o[k][l] = 'DELETE' THEN
-            v_ops = ROW('DELETE', l)::@extschema@.wagner_fischer_op||v_ops;
-            k = k-1;
-        ELSIF o[k][l] = 'INSERT' THEN
-            v_ops = ROW('INSERT', l-1)::@extschema@.wagner_fischer_op||v_ops;
-            l = l-1;
-        ELSIF o[k][l] = 'UPDATE' THEN
-            v_ops = ROW('UPDATE', l-1)::@extschema@.wagner_fischer_op||v_ops;
-            k = k-1;
-            l = l-1;
-        ELSE
-            k = k-1;
-            l = l-1; 
-        END IF;
-    END LOOP;
-
-    FOR i IN 1..k-1 LOOP
-        v_ops = ROW('DELETE', 1)::@extschema@.wagner_fischer_op||v_ops;
-    END LOOP;
-    FOR j IN 1..l-1 LOOP
-        v_ops = ROW('INSERT', 1)::@extschema@.wagner_fischer_op||v_ops;
-    END LOOP;
-
-    v_cost = d[array_length(s,1)+1][array_length(t,1)+1];
-END;
-
-$BODY$;
+  AS 'cuneiform_editor', 'cuneiform_levenshtein'
+  LANGUAGE C
+  STRICT
+  STABLE
+  COST 100;
 
 
 CREATE OR REPLACE FUNCTION update_all_entries (
