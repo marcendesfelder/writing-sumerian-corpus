@@ -285,9 +285,9 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
 
         
     repl = {'sz': 'š', 'SZ': 'Š', 'sy': 'ṣ', 'SY': 'Ṣ', 'ty': 'ṭ', 'TY': 'Ṭ', 'hy': 'ḥ', 'HY': 'Ḥ', "s'": "ś", "S'": "Ś"}
-    searchTerm = re.sub(r"(?<!@)(sz|SZ|sy|SY|ty|TY|hy|HY|s'|S')(?![0-9][0-9][0-9])", lambda m: repl[m.group()], search_term)
+    searchTerm = re.sub(r"(sz|SZ|sy|SY|ty|TY|hy|HY|s'|S')(?![0-9][0-9][0-9])", lambda m: repl[m.group()], search_term)
     tr = str.maketrans("cjvCJV'", 'šĝřŠĜŘ’')
-    searchTerm = re.sub(r'(?<!@)[cjvCJV](?![0-9][0-9][0-9])', lambda m: m.group().translate(tr), searchTerm)
+    searchTerm = re.sub(r"(?<!@)[cjvCJV'](?![0-9][0-9][0-9])", lambda m: m.group().translate(tr), searchTerm)
 
     if 'parser' not in SD:
         SD['parser'] = Lark(grammar, lexer='basic', propagate_positions=True)
