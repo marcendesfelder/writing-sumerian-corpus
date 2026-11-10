@@ -135,6 +135,8 @@ AS $BODY$
     CREATE INDEX transliterations_text_id_ix ON @extschema@.transliterations(text_id);
     CREATE INDEX compositions_parent_composition_id_ix ON @extschema@.compositions(parent_composition_id);
     CREATE INDEX sections_composition_id_ix ON @extschema@.sections(composition_id);
+    CREATE INDEX corpus_value_id_ix ON @extschema@.corpus(value_id) WHERE value_id IS NOT NULL;
+    CREATE INDEX corpus_sign_variant_id_ix ON @extschema@.corpus(sign_variant_id) WHERE sign_variant_id IS NOT NULL;
 $BODY$;
 
 CREATE OR REPLACE PROCEDURE database_drop_indexes ()
@@ -148,6 +150,8 @@ AS $BODY$
     DROP INDEX @extschema@.transliterations_text_id_ix;
     DROP INDEX @extschema@.compositions_parent_composition_id_ix;
     DROP INDEX @extschema@.sections_composition_id_ix;
+    DROP INDEX @extschema@.corpus_value_id_ix;
+    DROP INDEX @extschema@.corpus_sign_variant_id_ix;
 $BODY$;
 
 CALL database_create_indexes ();
