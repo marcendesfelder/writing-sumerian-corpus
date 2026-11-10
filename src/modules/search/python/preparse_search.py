@@ -289,7 +289,9 @@ def preparse_search(search_term:str, code:Out[str], wildcards:Out[List[str]], wi
     tr = str.maketrans("cjvCJV'", 'šĝřŠĜŘ’')
     searchTerm = re.sub(r'(?<!@)[cjvCJV](?![0-9][0-9][0-9])', lambda m: m.group().translate(tr), searchTerm)
 
-    l = Lark(grammar, lexer='basic', propagate_positions=True)
+    if 'parser' not in SD:
+        SD['parser'] = Lark(grammar, lexer='basic', propagate_positions=True)
+    l = SD['parser']
     try:
         tree = l.parse(searchTerm)
         code, wildcards = T().transform(tree)

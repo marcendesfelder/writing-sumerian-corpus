@@ -459,7 +459,9 @@ def parse_search(search_term:str, target_table:str, target_key:List[str], target
             return f'SELECT DISTINCT {keyCols}, {matchClause} AS signs, {wordMatchClause} AS words, {lineMatchClause} AS lines, {wildcardClause} AS wildcards FROM {fromClause} WHERE {whereClause}'
 
 
-    l = Lark(grammar, lexer='basic', maybe_placeholders=True)
+    if 'parser' not in SD:
+        SD['parser'] = Lark(grammar, lexer='basic', maybe_placeholders=True)
+    l = SD['parser']
     #try:
     tree = l.parse(search_term)
     tokens = T().transform(tree)
