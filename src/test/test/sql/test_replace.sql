@@ -374,7 +374,7 @@ CREATE OR REPLACE FUNCTION test_replace_asterisk ()
 $BODY$
 BEGIN
 CALL @extschema:cuneiform_parser@.parse(E'1\tensi2-ensi2', -1, '@extschema:cuneiform_corpus@');
-CALL @extschema:cuneiform_replace_corpus@.replace('[ensi2 |ENSI2|*]', 'pa-te-si', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
+CALL @extschema:cuneiform_replace_corpus@.replace('[ensi2 *|ENSI2|]', 'pa-te-si', -1, true, false, ARRAY[]::integer[], ARRAY[]::integer[], ARRAY[-1]);
 RETURN NEXT is(content, E'1\tpa-te-si-ensi2') FROM @extschema:cuneiform_serialize_corpus@.transliterations_serialized WHERE transliteration_id = -1;
 END;
 $BODY$;
