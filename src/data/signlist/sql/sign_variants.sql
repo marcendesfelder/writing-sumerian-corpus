@@ -4,13 +4,13 @@ CREATE OR REPLACE FUNCTION merge_variant_types (
   )
   RETURNS sign_variant_type
   LANGUAGE SQL
-  STABLE
+  IMMUTABLE
   STRICT
 BEGIN ATOMIC
   SELECT 
     CASE
       WHEN a = b THEN a
-      WHEN GREATEST(a, b) = ANY('{reduced, augmented}') AND LEAST(a, b) = 'default' THEN GREATEST(a, b)
+      WHEN GREATEST(a, b) = ANY('{reduced, augmented}') AND LEAST(a, b) = ANY('{default, nondefault}') THEN GREATEST(a, b)
       WHEN GREATEST(a, b) = ANY('{nonstandard, reduced, augmented}') THEN 'nonstandard'::sign_variant_type
       ELSE 'nondefault'::sign_variant_type
     END;
