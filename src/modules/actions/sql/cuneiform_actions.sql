@@ -196,7 +196,7 @@ EXECUTE format(
     v_schema)
     INTO v_value_old;
 
-IF v_value = v_value_old THEN
+IF v_value IS NOT DISTINCT FROM v_value_old THEN
     RETURN;
 END IF;
 
