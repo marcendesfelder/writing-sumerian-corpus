@@ -1,0 +1,5 @@
+comment = 'Functions to operate on cuneiform strings based on their meaning, independent of their form'
+default_version = '0.0.1'
+relocatable = true
+module_pathname = '$libdir/cuneiform_sign_meanings'
+requires = 'cuneiform_sign_properties, cuneiform_signlist'

@@ -20,7 +20,7 @@ CREATE TABLE @extschema:cuneiform_corpus@.corpus_parsed_unencoded (
 );
 CALL @extschema:cuneiform_encoder@.create_corpus_encoder('corpus_encoder', 'corpus_parsed_unencoded', '{transliteration_id}', '@extschema:cuneiform_corpus@');
 INSERT INTO @extschema:cuneiform_pn_tables@.pns OVERRIDING SYSTEM VALUE VALUES (-1, 'person', 'sumerian', NULL);
-INSERT INTO @extschema:cuneiform_pn_tables@.pn_variants OVERRIDING SYSTEM VALUE VALUES (-1, 0, ARRAY[]::@extschema:cuneiform_sign_properties@.sign_meaning[]);
+INSERT INTO @extschema:cuneiform_pn_tables@.pn_variants OVERRIDING SYSTEM VALUE VALUES (-1, 0, ARRAY[]::@extschema:cuneiform_sign_meanings@.sign_meaning[]);
 $BODY$;
 
 

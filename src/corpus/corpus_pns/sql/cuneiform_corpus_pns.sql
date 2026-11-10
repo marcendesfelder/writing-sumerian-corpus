@@ -33,7 +33,7 @@ SELECT
         phonographic,
         stem,
         capitalized
-      )::@extschema:cuneiform_sign_properties@.sign_meaning
+      )::@extschema:cuneiform_sign_meanings@.sign_meaning
       ORDER BY sign_no
     )
   ELSE 
@@ -93,7 +93,7 @@ ORDER BY
 CREATE OR REPLACE FUNCTION match_sign_meanings_to_compound (
     v_transliteration_id integer,
     v_compound_no integer,
-    v_sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[],
+    v_sign_meanings @extschema:cuneiform_sign_meanings@.sign_meaning[],
     OUT sign_nos_old integer[],
     OUT sign_nos_new integer[],
     OUT sign_variant_ids_new integer[]
@@ -168,7 +168,7 @@ END;
 CREATE OR REPLACE FUNCTION match_sign_meanings_to_compound_and_segmentize (
     v_transliteration_id integer,
     v_compound_no integer,
-    v_sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[],
+    v_sign_meanings @extschema:cuneiform_sign_meanings@.sign_meaning[],
     OUT sign_nos_old integer[],
     OUT sign_nos_new integer[],
     OUT sign_variant_ids_new integer[]
@@ -221,7 +221,7 @@ END;
 CREATE OR REPLACE FUNCTION adjust_compound_to_sign_meanings (
     v_transliteration_id integer,
     v_compound_no integer,
-    v_sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[]
+    v_sign_meanings @extschema:cuneiform_sign_meanings@.sign_meaning[]
     )
     RETURNS SETOF @extschema:cuneiform_actions@.log_data
     VOLATILE
@@ -498,7 +498,7 @@ DECLARE
 
 v_transliteration_id integer;
 v_compound_no integer;
-v_sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[];
+v_sign_meanings @extschema:cuneiform_sign_meanings@.sign_meaning[];
 v_edit_no integer;
 v_changes boolean;
 

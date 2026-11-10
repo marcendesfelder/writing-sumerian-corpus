@@ -5,6 +5,7 @@ all:
 	make -C data/log_tables
 	make -C data/pn_tables
 	make -C modules/log
+	make -C modules/sign_meanings
 	make -C modules/sign_properties
 	make -C modules/create_corpus
 	make -C modules/actions
@@ -38,6 +39,7 @@ install:
 	make -C data/log_tables install
 	make -C data/pn_tables install
 	make -C modules/log install
+	make -C modules/sign_meanings install
 	make -C modules/sign_properties install
 	make -C modules/create_corpus install
 	make -C modules/actions install

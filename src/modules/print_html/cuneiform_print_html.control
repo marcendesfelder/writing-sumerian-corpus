@@ -2,4 +2,4 @@ comment = 'Convert cuneiform passages into human-readable text with HTML markup'
 default_version = '0.0.1'
 relocatable = false
 module_pathname = '$libdir/cuneiform_print_html'
-requires = 'cuneiform_sign_properties, cuneiform_signlist, cuneiform_print_core'
+requires = 'cuneiform_sign_properties, cuneiform_signlist, cuneiform_sign_meanings, cuneiform_print_core'

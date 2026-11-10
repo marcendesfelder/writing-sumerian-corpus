@@ -169,7 +169,7 @@ BEGIN ATOMIC
 END;
 
 
-CREATE OR REPLACE FUNCTION print_sign_meanings_html (v_sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[])
+CREATE OR REPLACE FUNCTION print_sign_meanings_html (v_sign_meanings @extschema:cuneiform_sign_meanings@.sign_meaning[])
   RETURNS text
   STABLE
   COST 1000

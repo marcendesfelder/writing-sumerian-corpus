@@ -2,5 +2,5 @@ comment = 'Support for handling proper nouns in a cuneiform corpus'
 default_version = '0.0.1'
 relocatable = false
 module_pathname = '$libdir/cuneiform_corpus_pns'
-requires = 'cuneiform_actions, cuneiform_corpus, cuneiform_pn_tables, cuneiform_replace, cuneiform_signlist, cuneiform_sign_properties, cuneiform_log_tables'
-no_relocate = 'cuneiform_actions, cuneiform_corpus, cuneiform_pn_tables, cuneiform_replace, cuneiform_signlist, cuneiform_sign_properties, cuneiform_log_tables'
+requires = 'cuneiform_actions, cuneiform_corpus, cuneiform_pn_tables, cuneiform_replace, cuneiform_signlist, cuneiform_sign_properties, cuneiform_sign_meanings, cuneiform_log_tables'
+no_relocate = 'cuneiform_actions, cuneiform_corpus, cuneiform_pn_tables, cuneiform_replace, cuneiform_signlist, cuneiform_sign_properties, cuneiform_sign_meanings, cuneiform_log_tables'

@@ -313,7 +313,7 @@ $BODY$;
 CREATE OR REPLACE FUNCTION parse_to_sign_meanings (
         code text
     )
-    RETURNS @extschema:cuneiform_sign_properties@.sign_meaning[]
+    RETURNS @extschema:cuneiform_sign_meanings@.sign_meaning[]
     STABLE
     LANGUAGE PLPYTHON3U
     AS 
@@ -340,7 +340,7 @@ plan = plpy.prepare(
                     phonographic, 
                     stem,
                     CASE WHEN new_word THEN capitalized ELSE FALSE END
-                )::@extschema:cuneiform_sign_properties@.sign_meaning
+                )::@extschema:cuneiform_sign_meanings@.sign_meaning
                 ORDER BY corpus.ordinality
             ) AS sign_meanings
         FROM

@@ -47,42 +47,6 @@ CREATE TYPE pn_type AS ENUM (
     'festival'
 );
 
-CREATE TYPE sign_meaning AS (
-    word_no integer,
-    value_id integer,
-    sign_id integer,
-    indicator_type indicator_type,
-    phonographic boolean,
-    stem boolean,
-    capitalized boolean
-);
-
-
-CREATE OR REPLACE FUNCTION value_ids (v_sign_meanings sign_meaning[])
-    RETURNS integer[]
-    IMMUTABLE
-    LANGUAGE SQL
-BEGIN  ATOMIC
-
-SELECT
-    array_agg(value_id ORDER BY ord)
-FROM
-    UNNEST(v_sign_meanings) WITH ORDINALITY AS _(word_no, value_id, sign_id, indicator_type, phonographic, stem, capitalized, ord);
-END;
-
-
-CREATE OR REPLACE FUNCTION sign_ids (v_sign_meanings sign_meaning[])
-    RETURNS integer[]
-    IMMUTABLE
-    LANGUAGE SQL
-BEGIN  ATOMIC
-
-SELECT
-    array_agg(sign_id ORDER BY ord)
-FROM
-    UNNEST(v_sign_meanings) WITH ORDINALITY AS _(word_no, value_id, sign_id, indicator_type, phonographic, stem, capitalized, ord);
-END;
-
 
 CREATE OR REPLACE FUNCTION condition_agg_sfunc (sign_condition, sign_condition)
     RETURNS sign_condition

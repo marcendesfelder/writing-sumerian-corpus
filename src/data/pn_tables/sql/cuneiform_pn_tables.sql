@@ -9,7 +9,7 @@ CREATE TABLE pns (
 CREATE TABLE pn_variants (
   pn_id integer REFERENCES pns (pn_id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   pn_variant_no integer,
-  sign_meanings @extschema:cuneiform_sign_properties@.sign_meaning[],
+  sign_meanings @extschema:cuneiform_sign_meanings@.sign_meaning[],
   PRIMARY KEY (pn_id, pn_variant_no)
 );
 
@@ -32,7 +32,7 @@ CREATE TABLE pn_variants_unnest (
   pn_id integer,
   pn_variant_no integer,
   sign_no integer,
-  LIKE @extschema:cuneiform_sign_properties@.sign_meaning,
+  LIKE @extschema:cuneiform_sign_meanings@.sign_meaning,
   PRIMARY KEY (pn_id, pn_variant_no, sign_no),
   FOREIGN KEY (pn_id, pn_variant_no) REFERENCES pn_variants (pn_id, pn_variant_no) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   FOREIGN KEY (value_id) REFERENCES values (value_id) DEFERRABLE INITIALLY IMMEDIATE,
@@ -106,7 +106,7 @@ BEGIN
           pn_id,
           pn_variant_no,
           array_agg(
-            ROW(word_no, value_id, sign_id, indicator_type, phonographic, stem, capitalized)::@extschema:cuneiform_sign_properties@.sign_meaning
+            ROW(word_no, value_id, sign_id, indicator_type, phonographic, stem, capitalized)::@extschema:cuneiform_sign_meanings@.sign_meaning
             ORDER BY sign_no
           ) AS sign_meanings
         FROM
@@ -153,7 +153,7 @@ CREATE OR REPLACE VIEW pn_variants_suffixes_sign_meanings AS
 SELECT
   pn_id,
   pn_variant_no,
-  array_agg((0, value_id, sign_id, 'none', TRUE, FALSE, FALSE)::@extschema:cuneiform_sign_properties@.sign_meaning ORDER BY ord) AS sign_meanings
+  array_agg((0, value_id, sign_id, 'none', TRUE, FALSE, FALSE)::@extschema:cuneiform_sign_meanings@.sign_meaning ORDER BY ord) AS sign_meanings
 FROM
   @extschema@.pn_variants_suffixes
   LEFT JOIN LATERAL unnest(value_ids) WITH ORDINALITY AS _(value_id, ord) ON TRUE

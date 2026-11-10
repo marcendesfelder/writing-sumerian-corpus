@@ -2,4 +2,5 @@ comment = 'Tables for cuneiform proper noun data'
 default_version = '0.0.1'
 relocatable = false
 module_pathname = '$libdir/cuneiform_pn_tables'
-requires = 'cuneiform_sign_properties, cuneiform_signlist'
+requires = 'cuneiform_sign_properties, cuneiform_signlist, cuneiform_sign_meanings'
+no_relocate = 'cuneiform_sign_meanings'
