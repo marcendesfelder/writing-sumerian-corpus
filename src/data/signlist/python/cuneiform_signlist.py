@@ -90,19 +90,17 @@ def normalize_sign(tree:jsonb) -> jsonb:
 @sql_properties(cost=100, volatility='immutable', strict=True, transform=[jsonb])
 def match_sign(tree:jsonb, pattern:jsonb) -> bool:
 
-    precedence = {'.': 0, '+': 1, '×': 2, '&': 3, '%': 4, '@': 4}
-
     def match(node1, node2):
         if node2['op'] == 'X':
             return True
         if len(node1['vals']) != len(node2['vals']):
             return False
-
-        if len(node2['vals']) == 2 and node2['vals'][1]['op'] == 'X' and precedence[node1['op']] == precedence[node2['op']] and match(node1['vals'][0], node2):
-            return True
-
         if node1['op'] != node2['op']:
             return False
+
+        if len(node2['vals']) == 2 and node2['vals'][1]['op'] == 'X' and match(node1['vals'][0], node2):
+            return True
+
         for val1, val2 in zip(node1['vals'], node2['vals']):
             if not match(val1, val2):
                 return False
